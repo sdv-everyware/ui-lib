@@ -1,0 +1,41 @@
+// everyware_ui: UI components (button, icon button, toggle, radio, dropdown, list item,
+// keyboard) for harry apps. components.json is the shared spec with the Figma generator.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_defaults {
+    name: "everyware_ui_core_defaults",
+    crate_name: "everyware_ui_core",
+    crate_root: "core/src/lib.rs",
+    // With crate_root, srcs lists every file of the compilation: transitions.rs reads
+    // components.json with include_str!.
+    srcs: [
+        "core/src/*.rs",
+        "components.json",
+    ],
+    rustlibs: [
+        "libserde",
+        "libserde_json",
+    ],
+    host_supported: true,
+    vendor_available: true,
+    // in the panel's APEX (com.everyware.smarthome, min_sdk 35)
+    min_sdk_version: "29",
+}
+
+// The logic, without harry: host and device, tested on the host.
+rust_library {
+    name: "libeveryware_ui_core",
+    defaults: ["everyware_ui_core_defaults"],
+    visibility: ["//visibility:public"],
+}
+
+rust_test_host {
+    name: "everyware_ui_core_test",
+    defaults: ["everyware_ui_core_defaults"],
+    test_suites: ["general-tests"],
+}
+
+// The harry binding. harry's framework crates are visible to //vendor.

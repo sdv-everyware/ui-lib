@@ -1,0 +1,5 @@
+.vscode/
+*.v[0-9]*
+
+# design/build.sh output: built again from the patches, opened in Figma from here
+design/build/
