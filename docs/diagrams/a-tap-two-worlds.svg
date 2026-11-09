@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 384" role="img" aria-label="One tap in two worlds: Play runs the prototype, the device runs the reducer"><title>One tap in two worlds: Play runs the prototype, the device runs the reducer</title><style>
+.t-box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.t-hot{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.t-dim{fill:none;stroke:var(--ink2);stroke-width:1.2;stroke-dasharray:5 4}
+.t-frame{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.t-t{fill:var(--ink);font:600 14px Inter,system-ui,sans-serif}
+.t-s{fill:var(--ink2);font:12.5px Inter,system-ui,sans-serif}
+.t-n{fill:var(--accent);font:700 13px Inter,system-ui,sans-serif}
+.t-l{fill:var(--ink2);font:600 12px Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+.t-a{stroke:var(--ink2);stroke-width:1.5;fill:none}
+.t-x{stroke:#d9480f;stroke-width:1.5;stroke-dasharray:6 4}
+.t-xt{fill:#d9480f;font:600 12.5px Inter,system-ui,sans-serif}
+</style><defs><marker id="t-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ink2)"/></marker></defs>
+<text class="t-l" x="20" y="20">in Figma, Play: designers only</text>
+<rect class="t-box" x="20" y="32" width="140" height="64" rx="10"/>
+<text class="t-t" x="90.0" y="60" text-anchor="middle">tap</text>
+<text class="t-s" x="90.0" y="78" text-anchor="middle">#news/list</text>
+<line class="t-a" x1="160" y1="64" x2="174" y2="64" marker-end="url(#t-arr)"/>
+<rect class="t-box" x="176" y="32" width="296" height="64" rx="10"/>
+<text class="t-t" x="324.0" y="60" text-anchor="middle">prototype reaction</text>
+<text class="t-s" x="324.0" y="78" text-anchor="middle">open overlay, 300 ms ease-out</text>
+<line class="t-a" x1="472" y1="64" x2="486" y2="64" marker-end="url(#t-arr)"/>
+<rect class="t-box" x="488" y="32" width="200" height="64" rx="10"/>
+<text class="t-t" x="588.0" y="60" text-anchor="middle">overlay frame</text>
+<text class="t-s" x="588.0" y="78" text-anchor="middle">Panel · right</text>
+<text class="t-s" x="708" y="58">lives only in Figma:</text>
+<text class="t-s" x="708" y="76">the fetch never takes it</text>
+<line class="t-x" x1="20" y1="124" x2="940" y2="124"/>
+<rect x="150" y="112" width="660" height="24" rx="6" style="fill:var(--bg)"/>
+<text class="t-xt" x="480" y="129" text-anchor="middle">✕ harry never reads the prototype: no reactions in our .dcf, no interpreter in harry</text>
+<text class="t-l" x="20" y="162">on the device: harry</text>
+<rect class="t-box" x="20" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="90.0" y="212" text-anchor="middle">touch</text>
+<text class="t-s" x="90.0" y="230" text-anchor="middle">evdev</text>
+<rect class="t-box" x="176" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="246.0" y="212" text-anchor="middle">looper</text>
+<text class="t-s" x="246.0" y="230" text-anchor="middle">UiEventListener</text>
+<line class="t-a" x1="160" y1="216" x2="174" y2="216" marker-end="url(#t-arr)"/>
+<rect class="t-box" x="332" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="402.0" y="212" text-anchor="middle">HomeAction::</text>
+<text class="t-s" x="402.0" y="230" text-anchor="middle">Gesture(node)</text>
+<line class="t-a" x1="316" y1="216" x2="330" y2="216" marker-end="url(#t-arr)"/>
+<rect class="t-hot" x="488" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="558.0" y="203" text-anchor="middle">reducer</text>
+<text class="t-s" x="558.0" y="221" text-anchor="middle">panel.open()</text>
+<text class="t-s" x="558.0" y="239" text-anchor="middle">browser.open(url)</text>
+<line class="t-a" x1="472" y1="216" x2="486" y2="216" marker-end="url(#t-arr)"/>
+<rect class="t-box" x="644" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="714.0" y="212" text-anchor="middle">presenter</text>
+<text class="t-s" x="714.0" y="230" text-anchor="middle">State → UiModel</text>
+<line class="t-a" x1="628" y1="216" x2="642" y2="216" marker-end="url(#t-arr)"/>
+<rect class="t-box" x="800" y="174" width="140" height="84" rx="10"/>
+<text class="t-t" x="870.0" y="203" text-anchor="middle">harry draws</text>
+<text class="t-s" x="870.0" y="221" text-anchor="middle">the .dcf variant</text>
+<text class="t-s" x="870.0" y="239" text-anchor="middle">550 ms spring</text>
+<line class="t-a" x1="784" y1="216" x2="798" y2="216" marker-end="url(#t-arr)"/>
+<text class="t-l" x="20" y="296">for comparison: DesignCompose</text>
+<rect class="t-dim" x="20" y="308" width="140" height="64" rx="10"/>
+<text class="t-t" x="90.0" y="345" text-anchor="middle">tap</text>
+<rect class="t-dim" x="176" y="308" width="296" height="64" rx="10"/>
+<text class="t-t" x="324.0" y="336" text-anchor="middle">reactions in the .dcf</text>
+<text class="t-s" x="324.0" y="354" text-anchor="middle">synced by its Figma plugin</text>
+<line class="t-a" x1="160" y1="340" x2="174" y2="340" marker-end="url(#t-arr)"/>
+<rect class="t-dim" x="488" y="308" width="296" height="64" rx="10"/>
+<text class="t-t" x="636.0" y="336" text-anchor="middle">DesignCompose runtime</text>
+<text class="t-s" x="636.0" y="354" text-anchor="middle">opens the overlay itself</text>
+<line class="t-a" x1="472" y1="340" x2="486" y2="340" marker-end="url(#t-arr)"/>
+<rect class="t-dim" x="800" y="308" width="140" height="64" rx="10"/>
+<text class="t-t" x="870.0" y="336" text-anchor="middle">the app adds</text>
+<text class="t-s" x="870.0" y="354" text-anchor="middle">data, callbacks</text>
+<line class="t-a" x1="784" y1="340" x2="798" y2="340" marker-end="url(#t-arr)"/></svg>

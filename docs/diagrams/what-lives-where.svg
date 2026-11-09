@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 466" role="img" aria-label="Where each frame comes from: the code picks, the spec moves, Figma draws"><title>Where each frame comes from: the code picks, the spec moves, Figma draws</title><style>
+.w-box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.w-hot{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.w-dim{fill:none;stroke:var(--ink2);stroke-width:1.2;stroke-dasharray:5 4}
+.w-frame{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.w-t{fill:var(--ink);font:600 14px Inter,system-ui,sans-serif}
+.w-s{fill:var(--ink2);font:12.5px Inter,system-ui,sans-serif}
+.w-n{fill:var(--accent);font:700 13px Inter,system-ui,sans-serif}
+.w-l{fill:var(--ink2);font:600 12px Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+.w-a{stroke:var(--ink2);stroke-width:1.5;fill:none}
+.w-x{stroke:#d9480f;stroke-width:1.5;stroke-dasharray:6 4}
+.w-xt{fill:#d9480f;font:600 12.5px Inter,system-ui,sans-serif}
+</style><defs><marker id="w-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ink2)"/></marker></defs>
+<text class="w-l" x="20" y="22">three sources</text>
+<rect class="w-box" x="20" y="34" width="280" height="164" rx="10"/>
+<text class="w-n" x="36" y="60">1</text>
+<text class="w-t" x="56" y="60">the app's code</text>
+<text class="w-s" x="56" y="78" style="font-style:italic">what it does</text>
+<text class="w-s" x="36" y="108">· which variant now</text>
+<text class="w-s" x="36" y="129">· what a tap does</text>
+<text class="w-s" x="36" y="150">· the data: news, devices, Wi-Fi</text>
+<text class="w-s" x="36" y="171">· the texts and values</text>
+<rect class="w-box" x="340" y="34" width="280" height="164" rx="10"/>
+<text class="w-n" x="356" y="60">2</text>
+<text class="w-t" x="376" y="60">components.json</text>
+<text class="w-s" x="376" y="78" style="font-style:italic">how a change moves</text>
+<text class="w-s" x="356" y="108">· how long each change takes</text>
+<text class="w-s" x="356" y="129">· on which curve: ease, spring</text>
+<text class="w-s" x="356" y="150">· sheet open: 550 ms spring</text>
+<text class="w-s" x="356" y="171">· button press: 80 ms ease-out</text>
+<rect class="w-box" x="660" y="34" width="280" height="164" rx="10"/>
+<text class="w-n" x="676" y="60">3</text>
+<text class="w-t" x="696" y="60">Figma, fetched into the .dcf</text>
+<text class="w-s" x="696" y="78" style="font-style:italic">what it looks like</text>
+<text class="w-s" x="676" y="108">· layout and geometry</text>
+<text class="w-s" x="676" y="129">· colours, fonts, radii</text>
+<text class="w-s" x="676" y="150">· every state as a variant</text>
+<text class="w-s" x="676" y="171">· the #names: the contract</text>
+<rect class="w-frame" x="10" y="232" width="940" height="140" rx="14"/>
+<text class="w-l" x="26" y="362">harry, every frame</text>
+<rect class="w-hot" x="20" y="266" width="280" height="72" rx="10"/>
+<text class="w-t" x="160.0" y="298" text-anchor="middle">presenter: State → UiModel</text>
+<text class="w-s" x="160.0" y="316" text-anchor="middle">picks the variant, writes texts</text>
+<line class="w-a" x1="160.0" y1="198" x2="160.0" y2="264" marker-end="url(#w-arr)"/>
+<rect class="w-hot" x="340" y="266" width="280" height="72" rx="10"/>
+<text class="w-t" x="480.0" y="298" text-anchor="middle">the component's transition()</text>
+<text class="w-s" x="480.0" y="316" text-anchor="middle">moves the change over time</text>
+<line class="w-a" x1="480.0" y1="198" x2="480.0" y2="264" marker-end="url(#w-arr)"/>
+<rect class="w-hot" x="660" y="266" width="280" height="72" rx="10"/>
+<text class="w-t" x="800.0" y="298" text-anchor="middle">the renderer</text>
+<text class="w-s" x="800.0" y="316" text-anchor="middle">draws the variant's picture</text>
+<line class="w-a" x1="800.0" y1="198" x2="800.0" y2="264" marker-end="url(#w-arr)"/>
+<line class="w-a" x1="300" y1="302" x2="338" y2="302" marker-end="url(#w-arr)"/>
+<line class="w-a" x1="620" y1="302" x2="658" y2="302" marker-end="url(#w-arr)"/>
+<line class="w-a" x1="480" y1="372" x2="480" y2="404" marker-end="url(#w-arr)"/>
+<rect class="w-box" x="330" y="406" width="300" height="48" rx="10"/>
+<text class="w-t" x="480.0" y="435" text-anchor="middle">the screen</text>
+<text class="w-s" x="650" y="435">not used by harry: the Figma prototype</text></svg>
