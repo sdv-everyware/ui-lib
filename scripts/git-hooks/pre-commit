@@ -1,0 +1,39 @@
+#!/bin/bash
+# Before every commit (the same file in every repository of the project; everyware's
+# scripts/setup-agents.sh installs the hooks): not on main, the author is the project's, the
+# staged change has nothing private in it; then the repository's own scripts/check.sh, when it
+# has one (ui-lib: the tests, the docs, no use case in the API). AGENTS.md of everyware, "In git"
+# and "How a change lands", has the rules.
+set -u
+# a commit goes to a feature branch; main only gets the merge of a reviewed branch
+branch=$(git symbolic-ref --short -q HEAD || true)
+if [ "$branch" = main ] && git rev-parse -q --verify HEAD >/dev/null; then
+    echo "pre-commit: no commits on main. A change gets its own branch: vendor/sdv-everyware/everyware/scripts/feature.sh start <name> <repo>..." >&2
+    exit 1
+fi
+status=0
+fail() { echo "pre-commit: $*" >&2; status=1; }
+ident=$(git var GIT_AUTHOR_IDENT)
+case "$ident" in
+    "Daniel Georg <passenger6@gmail.com> "*) ;;
+    *) fail "the author is '${ident%>*}>': git config user.name 'Daniel Georg'; git config user.email passenger6@gmail.com" ;;
+esac
+# a Figma file key or a token (the brackets keep this line from matching itself) ...
+patterns='figma\.com/(design|file)/[A-Za-z0-9]{15,}|FIGMA_TOKE[N]=[A-Za-z0-9_-]{20,}'
+# ... and the person's own words (a user id, a work address): a file outside git, one extended
+# regex per line, written once by hand (setup-agents.sh makes the empty file with the comment)
+words=${EVERYWARE_PRIVATE_WORDS:-${HOME:-}/.config/everyware/private-words}
+if [ -f "$words" ]; then
+    # (spaces and a CR trimmed: a blank line would match three spaces, a CR would match nothing)
+    more=$(sed 's/^[[:space:]]*//; s/[[:space:]]*$//' "$words" | grep -v '^#' | grep -v '^$' | paste -sd'|')
+    [ -z "$more" ] || patterns="$patterns|$more"
+else
+    echo "pre-commit: $words is missing, the private words are not checked: run everyware's scripts/setup-agents.sh" >&2
+fi
+private=$(git diff --cached -U0 | grep '^+' | grep -nE -e "$patterns" || true)
+[ -z "$private" ] || { fail "something private in the staged change (a user id, a work address, a Figma key or token):"; echo "$private" | head -5 >&2; }
+[ $status = 0 ] || exit $status
+top=$(git rev-parse --show-toplevel)
+[ -f "$top/scripts/check.sh" ] || exit 0
+[ -x "$top/scripts/check.sh" ] || { echo "pre-commit: scripts/check.sh is not executable: chmod +x it" >&2; exit 1; }
+exec "$top/scripts/check.sh"

@@ -1,0 +1,27 @@
+#!/bin/bash
+# main moves only through everyware's scripts/feature.sh land (after the branch's review and the
+# user's word; AGENTS.md of everyware, "How a change lands"). This hook sees an update of a
+# branch however it is made (a commit, a merge with or without a merge commit, a cherry-pick, a
+# revert, a reset, branch -f, a push into this repository) and refuses one that moves main to
+# another commit. Not refused: the first commit of a new repository, and the deletion of main,
+# which git cannot tell from packing the refs (git gc). So main can still be replaced by a rename
+# onto it (git branch -M) or by a delete and a create: feature.sh status says when main is not
+# where land left it. It guards against a mistake, not against intent: land marks itself with
+# EVERYWARE_LAND=1.
+[ "$1" = prepared ] || exit 0
+[ "${EVERYWARE_LAND:-}" = 1 ] && exit 0
+zero=0000000000000000000000000000000000000000
+while read -r _old new ref; do
+    [ "$ref" = refs/heads/main ] || continue
+    [ "$new" = "$zero" ] && continue                                             # packing, or a deletion
+    now=$(git rev-parse -q --verify refs/heads/main 2>/dev/null) || continue   # main is made now
+    [ "$new" = "$now" ] && continue
+    cat >&2 <<'MSG'
+main moves only through vendor/sdv-everyware/everyware/scripts/feature.sh land <name> "<summary>"
+(a branch, its review, the user's word). To undo what the refused command left behind, without
+losing other uncommitted work: git merge --abort or git cherry-pick --abort for one that is half
+done; git reset --merge HEAD for the files a refused fast-forward or revert staged.
+MSG
+    exit 1
+done
+exit 0

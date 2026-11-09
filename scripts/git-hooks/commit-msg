@@ -1,0 +1,7 @@
+#!/bin/bash
+# No AI attribution and no co-author trailer in the history (AGENTS.md of everyware, "In git").
+# (the brackets keep this file from matching itself)
+if grep -qiE 'Co-Authored-B[y]|Generated wit[h] \[|noreply@anthropi[c]' "$1"; then
+    echo "commit-msg: no AI attribution and no co-author trailer in a commit message" >&2
+    exit 1
+fi
