@@ -39,3 +39,61 @@ rust_test_host {
 }
 
 // The harry binding. harry's framework crates are visible to //vendor.
+rust_library {
+    name: "libeveryware_ui",
+    crate_name: "everyware_ui",
+    crate_root: "harry/src/lib.rs",
+    srcs: ["harry/src/*.rs"],
+    rustlibs: [
+        "libcustomizations",
+        "libhar_platform_api",
+        "libharry_animation",
+        // pictures of components (src/images.rs): raw image storage, decoding
+        "libhar_types",
+        "libimage",
+        // the design's sizes from the .dcf (src/design.rs)
+        "libdc_bundle",
+        "libeveryware_ui_core",
+    ],
+    // ui_model! (src/model.rs): its derives, re-exported for the apps' call sites
+    proc_macros: [
+        "libderive_customizations",
+        "libhar_ui_model_derive",
+    ],
+    // the host too: the recipes test (everyware_ui_recipes_test) links the library as an app does
+    host_supported: true,
+    vendor_available: true,
+    // in the panel's APEX (com.everyware.smarthome, min_sdk 35)
+    min_sdk_version: "29",
+    visibility: ["//visibility:public"],
+}
+
+// Host tests of the harry binding: slots (SlotCustomizer, caret blink, tap names) and the
+// contract with the Figma library: every part the code sets is in every variant of its set,
+// checked against the .dcf the app ships.
+rust_test_host {
+    name: "everyware_ui_test",
+    crate_name: "everyware_ui",
+    crate_root: "harry/src/lib.rs",
+    srcs: ["harry/src/*.rs"],
+    rustlibs: [
+        "libcustomizations",
+        "libdc_bundle",
+        "libhar_platform_api",
+        "libharry_animation",
+        // pictures of components (src/images.rs): raw image storage, decoding
+        "libhar_types",
+        "libimage",
+        "libeveryware_ui_core",
+    ],
+    proc_macros: [
+        "libderive_customizations",
+        "libhar_ui_model_derive",
+    ],
+    data: ["data/library.dcf"],
+    test_suites: ["general-tests"],
+}
+
+// The recipes the docs show (docs/recipes.js -> docs/recipes/recipes.rs, written by
+// docs/build-docs.js): every component's lines in one small app, compiled and tapped, so a
+// recipe that does not build fails here and not in an app.
