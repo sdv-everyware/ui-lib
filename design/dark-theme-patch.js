@@ -2,7 +2,7 @@
 // one cyan accent). Applied with everyware's roundtrip.js to a .fig built on the Library, as the
 // last step of an app's design (an app's README has the chain):
 //
-//   node $FIGMA/roundtrip.js design/build/<app>-light.fig design/build/<app>.fig $UI/design/dark-theme-patch.js
+//   node $FIGMA/roundtrip.js design/build/<app>-light.fig design/<app>.fig $UI/design/dark-theme-patch.js
 //   (an app's design/build.sh runs it)
 //
 // Only the look changes: every #name, every frame and every variant stays, so an app draws it
