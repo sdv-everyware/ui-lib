@@ -38,12 +38,12 @@ A device's card, Material 3's card for a smart home device: a symbol, a title, a
   - field `pub subtitle: String`: 
   - field `pub value: String`: The value text (a slider's level, a stepper's value; empty for the others).
   - field `pub toggle: Toggle`: The toggle's state (kind toggle).
-  - field `pub slider: Slider`: The slider's level (kind slider; its track is not touched, any x will do).
+  - field `pub slider: Slider`: The slider's level and its track (kind slider): the track where the design draws it, in the tile's own pixels (`Tile::new`); `on_part` shifts the finger by the tile's place.
   - field `pub segmented: Segmented`: The modes and the chosen one (kind segmented).
   - field `pub image: Option<String>`: The key of a registered picture (kind image, everyware_ui::images).
   - field `pub press: Pressable`: Pressed and disabled.
-  - field `pub minus: Pressable`: The stepper's minus and plus buttons (kind stepper).
-  - field `pub plus: Pressable`: 
+  - field `pub minus: Pressable`: The stepper's minus button (kind stepper).
+  - field `pub plus: Pressable`: The stepper's plus button (kind stepper).
   - field `pub selected: bool`: The chosen card of a ribbon (a horizontal ListView lifts it).
   - `pub fn value(mut self, value: impl Into<String>) -> Self`: The value text.
   - `pub fn on_part(&mut self, part: Option<&str>, gesture: Gesture, x: f32, y: f32) -> Option<TileEvent>`: A gesture on the card (`part` None) or on a part inside it, by the name harry reports (`PART_TOGGLE`, `PART_SLIDER`, `#segmented/segment-<i>`, `PART_MINUS`, `PART_PLUS`). `x`, `y` is where the tile's top left is on the display (its row's place in the list plus the slot's), so the slider can read the finger against its track.
@@ -86,7 +86,7 @@ A tap on the card opens the device; the control inside (`state.rooms_tile_1.togg
 
 `kind` is the control the card shows: `toggle` (a light), `slider` (a dimmer), `segmented` (a fan's modes), `stepper` (a value with minus and plus) or `image` (a camera's picture); `state` is `default` or `disabled`. Pressed is `#tile/pressed` faded in. The parts: `#tile/title`, `#tile/subtitle`, `#tile/value`, the symbol stack `#tile/symbol/<icon>` (one lit), `#tile/image`, and the control inside: an instance of the Library's toggle, slider or segmented button, which the binding sets as its own (`#toggle/thumb`, `#slider/fill`, `#segmented/segment-<i>/selected` ...).
 
-A tap on the card reports `TileEvent::Opened`; the control inside takes its own taps: `on_part` with the part harry reports (`PART_TOGGLE`, `PART_SLIDER`, `#segmented/segment-<i>`, `PART_MINUS`, `PART_PLUS`) and the tile's place on the display gives `Toggled`, `Moving` and `Level`, `Mode` or `Step`. In a list the app gets the part with the row ("`<slot>/<row>/<part>`", `row_of` and `part_of`): the control's layers have the same names in every tile, harry hands the touch to the control first and to the card's row next, and `Input` pairs the two.
+A tap on the card reports `TileEvent::Opened`; the control inside takes its own taps: `on_part` with the part harry reports (`PART_TOGGLE`, `PART_SLIDER`, `#segmented/segment-<i>`, `PART_MINUS`, `PART_PLUS`) and the tile's place on the display gives `Toggled`, `Moving` and `Level`, `Mode` or `Step`. The app gets the part with its slot, and in a list with the row too ("`<slot>/<part>`", "`<slot>/<row>/<part>`": `row_of`, `part_of`): the control's layers have the same names in every tile, harry hands the touch to the control first and to the tile's slot or row next, and `Input` pairs the two.
 
 ## In Figma
 A slot of the tile's size (438 x 248) named `#<screen>/<device>` with an instance of `#tile` of the right kind. Texts and the control's position in the preview are placeholders.

@@ -46,7 +46,7 @@ skeleton: Skeleton::new(SkeletonKind::Text, SkeletonSize::Regular),</code></pre>
 <tr><th>Figma</th><td><a class="figma" data-node="2-3007" href="#">#skeleton on the Components page</a> <span class="muted">(set the file key in the menu)</span></td></tr>
 <tr><th>Spec</th><td><code>vendor/sdv-everyware/ui-lib/components.json:15</code> <span class="muted">properties, values, transitions</span></td></tr>
 <tr><th>Rust</th><td><code>vendor/sdv-everyware/ui-lib/core/src/skeleton.rs:36</code> <span class="muted"><code>Skeleton</code>, the state machine</span></td></tr>
-<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:753</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
+<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:758</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
 </tbody></table><ol class="steps">
 <li>A property, a value or a transition: <code>components.json</code>; the order of <code>props</code> is the order of the variant name.</li>
 <li>The drawing: the component set <code>#skeleton</code> in the Figma library, every variant; the layers the code sets keep their names <code>#skeleton/&lt;part&gt;</code>, nothing hidden.</li>

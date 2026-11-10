@@ -63,7 +63,8 @@ pub struct Tile {
     pub value: String,
     /// The toggle's state (kind toggle).
     pub toggle: Toggle,
-    /// The slider's level (kind slider; its track is not touched, any x will do).
+    /// The slider's level and its track (kind slider): the track where the design draws it,
+    /// in the tile's own pixels (`Tile::new`); `on_part` shifts the finger by the tile's place.
     pub slider: Slider,
     /// The modes and the chosen one (kind segmented).
     pub segmented: Segmented,
@@ -71,8 +72,9 @@ pub struct Tile {
     pub image: Option<String>,
     /// Pressed and disabled.
     pub press: Pressable,
-    /// The stepper's minus and plus buttons (kind stepper).
+    /// The stepper's minus button (kind stepper).
     pub minus: Pressable,
+    /// The stepper's plus button (kind stepper).
     pub plus: Pressable,
     /// The chosen card of a ribbon (a horizontal ListView lifts it).
     pub selected: bool,

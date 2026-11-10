@@ -91,12 +91,17 @@ pub fn row_of(slot: &str, node: &str) -> Option<usize> {
     node.strip_prefix(slot)?.strip_prefix('/')?.split('/').next()?.parse().ok()
 }
 
-/// The part of a row a node name points at: "<slot>/<row>/<part>" gives "<part>" (a control
-/// inside a tile, by the name harry reports, `tile::PART_TOGGLE` ...); None for the row itself.
+/// The part a node name points at: "<slot>/<row>/<part>" (a row of a list) or "<slot>/<part>"
+/// (a component in a plain slot) gives "<part>", the name harry reports for a control inside
+/// the component (`tile::PART_TOGGLE`, `#segmented/segment-2` ...); None for the row or the
+/// slot itself. A part starts with '#', a row is a number.
 pub fn part_of<'a>(slot: &str, node: &'a str) -> Option<&'a str> {
     let rest = node.strip_prefix(slot)?.strip_prefix('/')?;
+    if rest.starts_with('#') {
+        return Some(rest);
+    }
     let (_row, part) = rest.split_once('/')?;
-    Some(part)
+    part.starts_with('#').then_some(part)
 }
 
 /// The slot a node belongs to, for a node name harry reports: the clone root becomes its
@@ -834,6 +839,11 @@ mod tests {
         assert_eq!(part_of("#tv/cards", "#tv/cards/3/#segmented/segment-2"), Some("#segmented/segment-2"));
         assert_eq!(part_of("#tv/cards", "#tv/cards/3"), None);
         assert_eq!(part_of("#tv/cards", "#tv/cards"), None);
+        // a component in a plain slot: no row, the part right after the slot
+        assert_eq!(part_of("#hub/fan", "#hub/fan/#segmented/segment-2"), Some("#segmented/segment-2"));
+        assert_eq!(part_of("#rooms/tile-1", "#rooms/tile-1/#tile/toggle"), Some("#tile/toggle"));
+        assert_eq!(row_of("#rooms/tile-1", "#rooms/tile-1/#tile/toggle"), None);
+        assert_eq!(part_of("#hub/fan", "#hub/fan"), None);
     }
 
     #[test]

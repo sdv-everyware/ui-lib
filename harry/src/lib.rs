@@ -242,9 +242,10 @@ pub fn stamp(velocity: &Velocity, input: &UserInputEvent) {
 /// every row. harry delivers a touch to every interactive node under the finger, top-most
 /// first, and goes on to the next while the listener answers NotConsumed (as the reference
 /// app does: `reference/harry-app/src/events.rs`). So a part is held back with NotConsumed,
-/// the row's clone root comes next, and the two make one gesture on "<slot>/<row>/<part>".
-/// A part with no row under it (a control in its own slot) keeps its own name. The listener
-/// returns the status `feed` gives it.
+/// the clone root under it comes next (a row of a list, or the component's plain slot), and
+/// the two make one gesture on "<slot>/<row>/<part>" or "<slot>/<part>" (`row_of`, `part_of`).
+/// A part with nothing under it keeps its own name. The listener returns the status `feed`
+/// gives it.
 #[derive(Debug, Default)]
 pub struct Input {
     tracker: GestureTracker,
@@ -360,6 +361,20 @@ mod input_tests {
         assert_eq!(g, vec![("#tv/cards/3/#tile/toggle".to_string(), Gesture::Move { x: 402.0, y: 0.0, inside: true })]);
         let (g, _) = fed(&mut input, &touch("#tv/cards@$List-r3", END, 300.0));
         assert_eq!(g, vec![("#tv/cards/3/#tile/toggle".to_string(), Gesture::Up { x: 300.0, y: 0.0, inside: false, velocity: 0.0, velocity_x: 0.0 })]);
+    }
+
+    #[test]
+    fn a_part_in_a_plain_slot_is_paired_with_the_slot() {
+        let mut input = Input::default();
+        assert!(!fed(&mut input, &touch("#segmented/segment-2", START, 10.0)).1);
+        assert_eq!(fed(&mut input, &loose(START, 10.0)), (vec![], true));
+        // the slot's clone root (not a row): "<slot>/<part>"
+        assert_eq!(
+            fed(&mut input, &touch("#hub/fan@$List-i", START, 10.0)),
+            (vec![("#hub/fan/#segmented/segment-2".to_string(), Gesture::down(10.0, 0.0))], true)
+        );
+        let (g, _) = fed(&mut input, &touch("#segmented/segment-2", END, 10.0));
+        assert_eq!(g, vec![("#hub/fan/#segmented/segment-2".to_string(), Gesture::up(10.0, 0.0))]);
     }
 
     #[test]
