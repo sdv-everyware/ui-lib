@@ -69,6 +69,32 @@ model.wifi_cancel = slot("#wifi/cancel", &state.wifi_cancel);
 }
 ```
 
+### Live: `#wifi/cancel` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:144
+pub cancel: Button,
+cancel: Button::new(ButtonKind::Secondary, "Cancel"),
+
+// ui_model.rs:213
+wifi_cancel: Slot = "#wifi/cancel" ["SlotCustomizer"];
+
+// presenter.rs:66
+model.wifi_cancel = slot("#wifi/cancel", &wifi.cancel);
+
+// actions.rs:431
+"#wifi/cancel" => {
+    if wifi.cancel.on(gesture) == Some(ButtonEvent::Clicked) {
+        match wifi.step {
+            // from the password back to the list (as Android does)
+            Step::Password => wifi.back_to_networks(),
+            // the form closes with its transition
+            Step::Networks => wifi.form.close(),
+        }
+    }
+}
+```
+
 A button is the design's fixed size per variant (Google's components are drawn that way, the label centred in the box), not the label's width. `kind` is the look, `size` the width (200 regular for a sheet's actions, 116 compact in a widget's row), `state` only `default` or `disabled`: pressed is a layer the code fades, not a variant.
 
 ### In Figma
@@ -185,6 +211,29 @@ model.status_wifi = slot("#status/wifi", &state.status_wifi);
 }
 ```
 
+### Live: `#status/wifi` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:28
+pub wifi: WifiSheet,
+wifi: IconButton::new(IconButtonKind::Glass, Icon::Wifi).compact(),
+
+// ui_model.rs:159
+wifi_indicator: Slot = "#status/wifi" ["SlotCustomizer"];
+
+// presenter.rs:29
+model.wifi_indicator = slot("#status/wifi", &d.wifi);
+
+// actions.rs:131
+HomeAction::Gesture(node, gesture) if node == "#status/wifi" => {
+    // the Wi-Fi indicator opens the sheet; the sheet starts over every time
+    if state.dash.wifi.on(*gesture) == Some(ButtonEvent::Clicked) && !state.wifi.form.is_open() {
+        state.wifi = WifiSheet::opened(state.wifi.networks.clone(), state.wifi.state.clone());
+        house_link::send_wifi_command(wifi_scan());
+    }
+}
+```
+
 `kind` is the look (filled, tonal, plain), `icon` the design's glyph (Lucide names), `size` 56 or 48. `state` only `default` or `disabled`; pressed is `#icon-button/pressed`, a layer the code fades in. The glyph is part of the variant: an icon that changes at runtime is a variant change (rebuild), so pick a stable glyph per place, or stack glyphs in a slot of your own and light one by opacity.
 
 ### In Figma
@@ -260,6 +309,28 @@ model.wifi_reveal = slot("#wifi/reveal", &state.wifi_reveal);
 ```
 
 Read the value any time as `state.wifi_reveal.value` (a pub field); `state.wifi_reveal.set(on)` follows the device without a gesture.
+
+### Live: `#wifi/reveal` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:147
+/// Show the password instead of dots.
+pub reveal: Toggle,
+reveal: Toggle::new(false),
+
+// ui_model.rs:223
+wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];
+
+// presenter.rs:67
+model.wifi_reveal = slot("#wifi/reveal", &wifi.reveal);
+
+// actions.rs:447
+"#wifi/reveal" => {
+    if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
+        wifi.password_mut().secure = !shown;
+    }
+}
+```
 
 `state` is `default`, `pressed` (the thumb stretches under the finger) or `disabled`. On and off are not variants: `#toggle/thumb` is a horizontal progress marker the code moves from 0 to 100, `#toggle/on` the blue track the code fades in, both display-only and animated by the `value` transition (200 ms). `Toggle::set(value)` follows the device without a gesture; `on(gesture)` answers `Toggled(bool)` on a completed tap.
 
@@ -428,6 +499,24 @@ _ if node.starts_with("#dropdown/item/") => {
 
 The field opens and closes the list (`on_field`); an item reports by its own name, one open list at a time.
 
+### Live: `#status/presence` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:76
+/// Status row: who is home, and the Wi-Fi indicator that opens the sheet.
+pub presence: Dropdown,
+presence: Dropdown::new(["At home", "Away", "Asleep"]),
+
+// ui_model.rs:158
+presence: Slot = "#status/presence" ["SlotCustomizer"];
+
+// presenter.rs:26
+model.presence = slot("#status/presence", &d.presence);
+
+// actions.rs:298
+"#status/presence" => d.presence.on_field(gesture),
+```
+
 `state` is `default` or `disabled`. Open is `#dropdown/list` faded in, the chosen row `#dropdown/item/N/selected` lit, both display-only. The pill shows the selected item's text (`#dropdown/value`); the items report taps by their own names (`#dropdown/item/2`), unambiguous while one dropdown is open on the screen. `on_field(gesture)` opens and closes, `on_item(i, gesture)` answers `Selected(i)`.
 
 ### In Figma
@@ -538,6 +627,21 @@ _ if node == "#wifi/networks" || node.starts_with("#wifi/networks/") => {
 
 A list is a `ListView` of rows (`ListItem`), its slot `interactive`; new rows with `state.wifi_networks.set_rows(...)` keep a tap in progress.
 
+### Live: `#wifi/networks` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:141
+/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
+pub list: ListView,
+list: ListView::new([], LIST_H, ROW_PITCH),
+
+// ui_model.rs:216
+wifi_networks: Slot = "#wifi/networks" interactive ["SlotCustomizer"];
+
+// presenter.rs:61
+model.wifi_networks = list("#wifi/networks", &wifi.list);
+```
+
 `kind` is what the row carries: `plain`, `icon` (a leading glyph), `image` (a leading picture), `toggle`, `chevron`, `text` (a value on the right, for label and value rows). `lines` one to three, `size` the width (`regular`, `column` 490 for two columns in a dialog, `wide` 960). `state` only `default`, `selected`, `disabled`: pressed is a layer.
 
 Rows do not stand alone on a screen: a **ListView** (`core/src/list_view.rs`) holds them, scrolls them (drag, fling, Android's physics), selects one and reports a tap; the slot of the list is a clipping frame with preview rows, harry places the rows at their scrolled y.
@@ -639,6 +743,21 @@ model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &state.list);
 ```
 
 Display only: it follows the `ListView` of its list (`list`) and fades out when the list stops.
+
+### Live: `#wifi/scrollbar` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:141
+/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
+pub list: ListView,
+list: ListView::new([], LIST_H, ROW_PITCH),
+
+// ui_model.rs:220
+wifi_scrollbar: Slot = "#wifi/scrollbar" ["SlotCustomizer"];
+
+// presenter.rs:62
+model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &wifi.list);
+```
 
 `length` is the thumb's share of the track, as the design draws it; the position `#scrollbar/thumb` is a vertical progress marker (0..100) the code moves with the list's scroll. The scrollbar has no state of its own: `scrollbar("#x", &list)` reads the `ListView` of the rows and fades the thumb out after the list settles.
 
@@ -749,6 +868,35 @@ _ if node.starts_with("#segmented/segment-") => {
     let n = node["#segmented/segment-".len()..].parse::<usize>().ok().and_then(|n| n.checked_sub(1));
     if let Some(SegmentedEvent::Selected(i)) = n.and_then(|n| state.office_fan.on(n, gesture)) {
         let _ = i; // yours: state.office_fan.value() is the label
+    }
+}
+```
+
+### Live: `#office/fan` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:89
+/// The Office fan's mode.
+pub fan: Segmented,
+fan: Segmented::new(["Low", "Med", "High"]),
+
+// ui_model.rs:174
+office_fan: Slot = "#office/fan" ["SlotCustomizer"];
+
+// presenter.rs:40
+model.office_fan = slot("#office/fan", &d.fan);
+
+// actions.rs:342
+_ if part_of("#office/fan", node).is_some() => {
+    // the fan's segments, "#office/fan/#segmented/segment-<i>" (the part with its slot)
+    if let Some(n) = part_of("#office/fan", node)
+        .and_then(|p| p.strip_prefix("#segmented/segment-"))
+        .and_then(|n| n.parse::<usize>().ok())
+    {
+        if let Some(SegmentedEvent::Selected(_)) = n.checked_sub(1).and_then(|i| d.fan.on(i, gesture)) {
+            log::info!("smarthome: office fan {}", d.fan.value());
+            return Some(Control::Fan(d.fan.value().to_string()));
+        }
     }
 }
 ```
@@ -964,6 +1112,16 @@ model.panel_skeleton_1 = slot("#panel/skeleton-1", &state.panel_skeleton_1);
 
 Display only; `state.panel_skeleton_1.start(Instant::now())` while the content loads.
 
+### Live: `#panel/skeleton-1` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:257
+panel_skeleton_1: Slot = "#panel/skeleton-1" ["SlotCustomizer"];
+
+// presenter.rs:106
+model.panel_skeleton_1 = slot("#panel/skeleton-1", &browser.skeletons[0]);
+```
+
 ### Check
 
 - `everyware_ui_test` (host): the variants and parts the code uses exist in the app's .dcf
@@ -1015,6 +1173,16 @@ device_symbol: Slot = "#device/symbol" ["SlotCustomizer"];
 model.device_symbol = slot("#device/symbol", &state.device_symbol);
 
 // actions.rs: nothing, display only
+```
+
+### Live: `#device/symbol` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:232
+device_symbol: Slot = "#device/symbol" ["SlotCustomizer"];
+
+// presenter.rs:77
+model.device_symbol = slot("#device/symbol", &Symbol::new(device.view.symbol));
 ```
 
 `icon` names the glyph (the design's icons). `Symbol::new(icon)` gives the variant; there is nothing to tap. A symbol is a variant per glyph, so it changes rarely (a sheet opens for another device); in a list row use the stacked `#icon` instead.
@@ -1113,6 +1281,16 @@ _ if node.starts_with("#kbd/") => {
 
 Usually inside the keyboard dock with a form (`Form`), which routes the keys to the focused field.
 
+### Live: `#osk/keys` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:267
+osk_keys: Slot = "#osk/keys" ["SlotCustomizer"];
+
+// presenter.rs:114
+model.osk_keys = slot("#osk/keys", &state.osk.keyboard);
+```
+
 `#keyboard` has no variants: the keys are `#kbd/<row>/<i>` with `/pressed` (faded in while down) and `/label` (the character of the current mode: letters, shift, symbols). `Keyboard::on(gesture)` takes the key from the node name and answers an `Outcome` (a character, backspace, done, a mode change); the text itself belongs to the field being edited (`Form`, `InputField`). The keyboard sits in the keyboard dock (`#keyboard-dock`), one per screen.
 
 ### In Figma
@@ -1194,6 +1372,29 @@ model.bedroom_dimmer = slot("#bedroom/dimmer", &state.bedroom_dimmer);
 
 `frame` is where the design puts the slot: `let frame = sizes.frame("#bedroom/dimmer")` with `sizes = Sizes::load(<the .dcf>)` at the start; the touch area follows the design.
 
+### Live: `#bedroom/dimmer` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:87
+pub dimmer: Slider,
+dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),
+
+// ui_model.rs:172
+bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];
+
+// presenter.rs:38
+model.bedroom_dimmer = slot("#bedroom/dimmer", &d.dimmer);
+
+// actions.rs:335
+"#bedroom/dimmer" => {
+    // the value follows the finger (SliderEvent::Moving) and is in the slider; the
+    // device gets it when the finger is up
+    if let Some(SliderEvent::Changed(percent)) = d.dimmer.on(gesture) {
+        return Some(Control::Dimmer(percent));
+    }
+}
+```
+
 `state` is `default`, `pressed` or `disabled`. The value (0..100) moves `#slider/fill` (a progress bar) and `#slider/thumb` (a progress marker), display-only, so the thumb follows the finger every frame. `on(gesture)` answers `Moving(value)` while the finger drags and `Changed(value)` when it lifts; the app sends the device the `Changed` value and may show `Moving` live. `Slider::new(value, track_x, track_width)` needs the track's place on the display, because the finger's x is a display coordinate.
 
 ### In Figma
@@ -1253,6 +1454,16 @@ model.weather_chart = slot("#weather/chart", &state.weather_chart);
 ```
 
 Display only; `BarChart::new(bars)` takes up to 24 (level 0..100, accent) pairs. The app scales its data to levels and decides which bars are accented.
+
+### Live: `#weather/chart` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:195
+weather_chart: Slot = "#weather/chart" ["SlotCustomizer"];
+
+// presenter.rs:139
+model.weather_chart = slot("#weather/chart", &chart);
+```
 
 `#bar-chart` has one variant, `bars=24`: `#bar-chart/bar/<1..24>` are vertical progress bar meters (the level, 0..100), `#bar-chart/bar/<i>/accent` is the same bar in the accent colour, shown by opacity. `BarChart::new(bars)` takes (level, accent) pairs; it clamps a level to 0..100 and does nothing else. Scaling data to levels (a day's temperatures to the chart's height) and choosing the accented bars (the hours with rain) is the app's presenter.
 
@@ -1474,6 +1685,16 @@ model.wifi_password = slot("#wifi/password", &state.wifi_password);
         // yours: open the keyboard (a Form does it for its fields)
     }
 }
+```
+
+### Live: `#wifi/password` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:211
+wifi_password: Slot = "#wifi/password" ["SlotCustomizer"];
+
+// presenter.rs:64
+model.wifi_password = slot("#wifi/password", wifi.password());
 ```
 
 `state` is `default`, `disabled` or `error`. Focus (`#input-field/focus`), the blinking caret (`#input-field/caret`), the placeholder (`#input-field/placeholder`, shown while empty) are opacities; the text is `#input-field/text` (dots while `secure`). `InputField::new(placeholder, helper)`; `on(gesture, now)` answers `Focused`; typing comes through the `Form` from the keyboard.

@@ -56,6 +56,21 @@ model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &state.list);
 
 Display only: it follows the `ListView` of its list (`list`) and fades out when the list stops.
 
+## Live: `#wifi/scrollbar` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:141
+/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
+pub list: ListView,
+list: ListView::new([], LIST_H, ROW_PITCH),
+
+// ui_model.rs:220
+wifi_scrollbar: Slot = "#wifi/scrollbar" ["SlotCustomizer"];
+
+// presenter.rs:62
+model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &wifi.list);
+```
+
 `length` is the thumb's share of the track, as the design draws it; the position `#scrollbar/thumb` is a vertical progress marker (0..100) the code moves with the list's scroll. The scrollbar has no state of its own: `scrollbar("#x", &list)` reads the `ListView` of the rows and fades the thumb out after the list settles.
 
 ## In Figma

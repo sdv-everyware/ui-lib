@@ -77,6 +77,29 @@ model.status_wifi = slot("#status/wifi", &state.status_wifi);
 }
 ```
 
+## Live: `#status/wifi` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:28
+pub wifi: WifiSheet,
+wifi: IconButton::new(IconButtonKind::Glass, Icon::Wifi).compact(),
+
+// ui_model.rs:159
+wifi_indicator: Slot = "#status/wifi" ["SlotCustomizer"];
+
+// presenter.rs:29
+model.wifi_indicator = slot("#status/wifi", &d.wifi);
+
+// actions.rs:131
+HomeAction::Gesture(node, gesture) if node == "#status/wifi" => {
+    // the Wi-Fi indicator opens the sheet; the sheet starts over every time
+    if state.dash.wifi.on(*gesture) == Some(ButtonEvent::Clicked) && !state.wifi.form.is_open() {
+        state.wifi = WifiSheet::opened(state.wifi.networks.clone(), state.wifi.state.clone());
+        house_link::send_wifi_command(wifi_scan());
+    }
+}
+```
+
 `kind` is the look (filled, tonal, plain), `icon` the design's glyph (Lucide names), `size` 56 or 48. `state` only `default` or `disabled`; pressed is `#icon-button/pressed`, a layer the code fades in. The glyph is part of the variant: an icon that changes at runtime is a variant change (rebuild), so pick a stable glyph per place, or stack glyphs in a slot of your own and light one by opacity.
 
 ## In Figma

@@ -73,7 +73,7 @@ outcomes to the fields and the dock follows the focus (`state.osk.follow(...)`).
 ## 3. Check
 
 - `everyware_ui_test` (the parts of `#sheet` exist in the .dcf), `m smarthome_app`, run
-  (harry-app skill): the card slides in by the `open` transition, the scrim fades, a tap on
+  (the new-app skill, steps 7 and 8): the card slides in by the `open` transition, the scrim fades, a tap on
   the scrim closes, a dialog moves up when the keyboard opens.
 - `scripts/check.sh` before the commit.
 

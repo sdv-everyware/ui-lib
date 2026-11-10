@@ -211,7 +211,7 @@ measured with the design's text and an opacity set by the item never reaches the
   names (`#kbd/r1/3`, `#dropdown/item/2`); they are unambiguous while one such component is on
   the screen (one keyboard, one open list).
 - Build `m smarthome_app`, run `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh`,
-  screenshot (see the harry-app skill), press and release the component on the touch screen.
+  screenshot (see the new-app skill, steps 7 and 8), press and release the component on the touch screen.
 
 ## Example: a composite component (the keyboard)
 

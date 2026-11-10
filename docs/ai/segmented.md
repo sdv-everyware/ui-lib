@@ -60,6 +60,35 @@ _ if node.starts_with("#segmented/segment-") => {
 }
 ```
 
+## Live: `#office/fan` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:89
+/// The Office fan's mode.
+pub fan: Segmented,
+fan: Segmented::new(["Low", "Med", "High"]),
+
+// ui_model.rs:174
+office_fan: Slot = "#office/fan" ["SlotCustomizer"];
+
+// presenter.rs:40
+model.office_fan = slot("#office/fan", &d.fan);
+
+// actions.rs:342
+_ if part_of("#office/fan", node).is_some() => {
+    // the fan's segments, "#office/fan/#segmented/segment-<i>" (the part with its slot)
+    if let Some(n) = part_of("#office/fan", node)
+        .and_then(|p| p.strip_prefix("#segmented/segment-"))
+        .and_then(|n| n.parse::<usize>().ok())
+    {
+        if let Some(SegmentedEvent::Selected(_)) = n.checked_sub(1).and_then(|i| d.fan.on(i, gesture)) {
+            log::info!("smarthome: office fan {}", d.fan.value());
+            return Some(Control::Fan(d.fan.value().to_string()));
+        }
+    }
+}
+```
+
 `segments` is the number (2, 3, 4), `state` `default` or `disabled`. Each segment is `#segmented/segment-<i>` (a tap target) with `/selected` (the lit background) and `/label`; selection fades, the variant does not change. `on(index, gesture)` takes the segment from the node name and answers `Selected(index)`. The texts of the segments are the app's (`set_labels`).
 
 ## In Figma
