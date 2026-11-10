@@ -46,7 +46,9 @@ list_item: ListView::new([ListItem::new(ListItemKind::Plain, "Title", "Supportin
 <div class="step" data-stage="4"><h4>ui_model.rs: what to show, by node name</h4><div class="muted">One field per node in <code>everyware_ui::ui_model! { ... }</code>; the <code>SlotCustomizer</code> turns it into harry's customizations.</div>
 <pre><code class="language-rust">list_item: Slot = "SLOT" interactive ["SlotCustomizer"];</code></pre></div>
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set (<code>#list-item/pressed</code> fades in while pressed): the picture on the left is what the device shows.</div></div>
-</div><pre><code class="language-rust">// state: the rows and the view (height of the slot, pitch between rows)
+</div><h3>Live: <code>#wifi/networks</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:141</div><pre><code class="language-rust">/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
+pub list: ListView,
+list: ListView::new([], LIST_H, ROW_PITCH),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:216</div><pre><code class="language-rust">wifi_networks: Slot = "#wifi/networks" interactive ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:61</div><pre><code class="language-rust">model.wifi_networks = list("#wifi/networks", &amp;wifi.list);</code></pre></div><pre><code class="language-rust">// state: the rows and the view (height of the slot, pitch between rows)
 pub list: ListView,                                     // ListView::new([], LIST_H, ROW_PITCH)
 fn row(network: &amp;Network) -&gt; ListItem {
     ListItem::new(ListItemKind::Icon, network.ssid.clone(), network.security.name()).wide().leading("wifi").trailing(Some("lock"))

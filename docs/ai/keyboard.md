@@ -80,6 +80,16 @@ _ if node.starts_with("#kbd/") => {
 
 Usually inside the keyboard dock with a form (`Form`), which routes the keys to the focused field.
 
+## Live: `#osk/keys` in smarthome-app (cut from the sources at build time)
+
+```rust
+// ui_model.rs:267
+osk_keys: Slot = "#osk/keys" ["SlotCustomizer"];
+
+// presenter.rs:114
+model.osk_keys = slot("#osk/keys", &state.osk.keyboard);
+```
+
 `#keyboard` has no variants: the keys are `#kbd/<row>/<i>` with `/pressed` (faded in while down) and `/label` (the character of the current mode: letters, shift, symbols). `Keyboard::on(gesture)` takes the key from the node name and answers an `Outcome` (a character, backspace, done, a mode change); the text itself belongs to the field being edited (`Form`, `InputField`). The keyboard sits in the keyboard dock (`#keyboard-dock`), one per screen.
 
 ## In Figma

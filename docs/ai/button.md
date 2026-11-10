@@ -65,6 +65,32 @@ model.wifi_cancel = slot("#wifi/cancel", &state.wifi_cancel);
 }
 ```
 
+## Live: `#wifi/cancel` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:144
+pub cancel: Button,
+cancel: Button::new(ButtonKind::Secondary, "Cancel"),
+
+// ui_model.rs:213
+wifi_cancel: Slot = "#wifi/cancel" ["SlotCustomizer"];
+
+// presenter.rs:66
+model.wifi_cancel = slot("#wifi/cancel", &wifi.cancel);
+
+// actions.rs:431
+"#wifi/cancel" => {
+    if wifi.cancel.on(gesture) == Some(ButtonEvent::Clicked) {
+        match wifi.step {
+            // from the password back to the list (as Android does)
+            Step::Password => wifi.back_to_networks(),
+            // the form closes with its transition
+            Step::Networks => wifi.form.close(),
+        }
+    }
+}
+```
+
 A button is the design's fixed size per variant (Google's components are drawn that way, the label centred in the box), not the label's width. `kind` is the look, `size` the width (200 regular for a sheet's actions, 116 compact in a widget's row), `state` only `default` or `disabled`: pressed is a layer the code fades, not a variant.
 
 ## In Figma

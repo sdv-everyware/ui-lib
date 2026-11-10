@@ -93,6 +93,21 @@ _ if node == "#wifi/networks" || node.starts_with("#wifi/networks/") => {
 
 A list is a `ListView` of rows (`ListItem`), its slot `interactive`; new rows with `state.wifi_networks.set_rows(...)` keep a tap in progress.
 
+## Live: `#wifi/networks` in smarthome-app (cut from the sources at build time)
+
+```rust
+// state.rs:141
+/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
+pub list: ListView,
+list: ListView::new([], LIST_H, ROW_PITCH),
+
+// ui_model.rs:216
+wifi_networks: Slot = "#wifi/networks" interactive ["SlotCustomizer"];
+
+// presenter.rs:61
+model.wifi_networks = list("#wifi/networks", &wifi.list);
+```
+
 `kind` is what the row carries: `plain`, `icon` (a leading glyph), `image` (a leading picture), `toggle`, `chevron`, `text` (a value on the right, for label and value rows). `lines` one to three, `size` the width (`regular`, `column` 490 for two columns in a dialog, `wide` 960). `state` only `default`, `selected`, `disabled`: pressed is a layer.
 
 Rows do not stand alone on a screen: a **ListView** (`core/src/list_view.rs`) holds them, scrolls them (drag, fling, Android's physics), selects one and reports a tap; the slot of the list is a clipping frame with preview rows, harry places the rows at their scrolled y.
