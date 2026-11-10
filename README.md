@@ -44,8 +44,9 @@ sets, its transitions, the Rust API and the lines an app writes.
 ## Get started
 
 **The project is built AI first.** `everyware`, `ui-lib` and every app have an `AGENTS.md`, the
-guide a coding agent reads before it touches anything, and the work itself is written down as **skills**: step by step
-instructions an agent follows, with the traps. This library's guide is [AGENTS.md](AGENTS.md).
+guide a coding agent reads before it touches anything, and the work itself is written down as
+**skills**: step by step instructions an agent follows, with the traps. This library's guide is
+[AGENTS.md](AGENTS.md).
 
 The library is part of the SDV EveryWare tree. Sync the tree and build the image as described in
 [everyware](https://github.com/sdv-everyware/everyware#get-started); the paths below are relative
@@ -56,8 +57,7 @@ to the top of that tree.
 Open the tree in a coding agent (Claude Code, or any agent that reads `AGENTS.md`) and say what
 you want in one sentence. After `repo sync` with the project's manifest the tree's top has
 `AGENTS.md` and `CLAUDE.md`, both links to the project's guide, so the agent knows the skills
-from the start. It picks the skill and follows it
-to the board:
+from the start. It picks the skill and follows it to the board:
 
 | You tell the agent | Skill | What the agent does |
 |---|---|---|

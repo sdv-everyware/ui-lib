@@ -42,11 +42,11 @@ file for the task, do the task, run the check; do not read the site.
 | Task | Read | Then |
 |---|---|---|
 | a new EveryWare app: a new screen as an app of its own, from one sentence | `skills/new-app/SKILL.md` | the layout as ASCII first, `scripts/new-app.sh <name>`, the patch, `fig-to-dcf.sh`, `m <name>_app`, the RB3 |
-| put a library component on a screen (a button, a toggle, a list ...) | `skills/use-component/SKILL.md`, then `docs/ai/<component>.md` | the Figma slot, the four lines in the app, `everyware_ui_test` |
+| put a library component on a screen (a button, a toggle, a list ...) | `skills/use-component/SKILL.md`, then `docs/ai/<component>.md` | the Figma slot, the four places in the app, `everyware_ui_test` |
 | a sheet, dialog or side panel over the screen | `skills/sheet/SKILL.md`, `docs/ai/sheet.md` | the content component in Figma, `Sheet` in the app |
 | a new component, a new variant, a new transition | `skills/ui-component/SKILL.md`, `skills/ui-component/traps.md` | `components.json`, Figma generator, Rust, binding, docs |
 | a screen, a tab, the designer's prototype in Figma | `../everyware/skills/figma-design/SKILL.md` | the kiwi generators, a versioned .fig |
-| the app itself (state, actions, presenter, UI model, build, run, debug) | `skills/new-app/SKILL.md` (steps 6 to 8), `packages/services/display_safety/utils/smarthome-app/docs/harry-app-anatomy.md` | |
+| the app itself (state, actions, presenter, UI model, build, run, debug) | `skills/new-app/SKILL.md` (steps 6 to 8), `../../../packages/services/display_safety/utils/smarthome-app/docs/harry-app-anatomy.md` | |
 | what the library is, its principles and rules | `docs/llms.txt` (2 KB) | |
 | one component's facts: variants, parts, API, events, the app's lines, where it is used | `docs/ai/<component>.md` (1-3 KB each; all of them: `docs/llms-full.txt`) | |
 | whether a change is right | `scripts/check.sh` | |
