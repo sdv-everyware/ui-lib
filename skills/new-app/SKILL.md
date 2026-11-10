@@ -81,9 +81,9 @@ CHECK='#<name>/time #<name>/<part> ...' $APP/design/build.sh
 
 `design/build.sh` (from the template) builds the Library (`$UI/design/build-library.sh`, only
 the Library, no app's screen in it), applies `design/<name>-patch.js` and the dark theme into
-`$APP/design/build/<name>.fig`, and makes `$APP/data/<name>.dcf` with fig-to-dcf.sh.
-`design/build/` is a build output, not in git: built again from the patches each time, the
-.fig to open in Figma to look at it (the app does not need that). `CHECK` lists names that must
+`$APP/design/<name>.fig`, and makes `$APP/data/<name>.dcf` with fig-to-dcf.sh.
+`design/<name>.fig` is in git: the file a designer opens in Figma (the app's README, "The design
+in Figma, without scripts"); `design/build/` holds the intermediates. `CHECK` lists names that must
 be in the .dcf (0 = misnamed or hidden). It needs `node`, `unzip`, `zip` and the tree's
 importer (cargo); the kiwi format comes with roundtrip.js. Optional
 check on the host: `dcf-render <dcf> '#<name>-root' out.png` (har-rendering-parity, headless)
@@ -151,7 +151,7 @@ TRACKING_ID -1, BTN_TOUCH 0, SYN. The app logs `<name>: down on <node>` for ever
 the full absolute path of the built file (the build script prints it as its last line, `review in
 Figma (File > Import): ...`), what changed in it, and where to look (the frame or the set's name).
 Not a bare file name, not a path relative to the repository.
-For an app: `<tree>/packages/services/display_safety/utils/<name>-app/design/build/<name>.fig`,
+For an app: `<tree>/packages/services/display_safety/utils/<name>-app/design/<name>.fig`,
 the frame `#<name>-root` on Page 1.
 
 ## 10. Review, then the user

@@ -43,7 +43,7 @@ git -C "$figma" diff --quiet main -- . 2>/dev/null || echo "warning: the Figma t
 rename() {
     sed -e "s/tv_app/${name}_app/g; s/tv-app/${name}-app/g; s/TvAction/${Name}Action/g" \
         -e "s/#tv-root/#${name}-root/g; s/#tv-weather/#${name}-weather/g; s|#tv/|#${name}/|g; s|/data/local/tmp/tv|/data/local/tmp/${name}|g" \
-        -e "s/tv-patch\.js/${name}-patch.js/g; s/tv-light\.fig/${name}-light.fig/g; s|build/tv\.fig|build/${name}.fig|g; s/tv\.dcf/${name}.dcf/g" \
+        -e "s/tv-patch\.js/${name}-patch.js/g; s/tv-light\.fig/${name}-light.fig/g; s/tv\.fig/${name}.fig/g; s/tv\.dcf/${name}.dcf/g" \
         -e "s/Smart HOme tv v/Smart HOme ${name} v/g" \
         -e "s/\"tv: /\"${name}: /g; s/authoring(msg, 'tv')/authoring(msg, '${name}')/g; s/the TV screen/the ${name} screen/g"
 }
@@ -51,7 +51,8 @@ rename() {
 # ---- the app: the committed files of tv-app, renamed
 mkdir -p "$dst"
 git -C "$src" ls-files -z | while IFS= read -r -d '' f; do
-    case "$f" in data/*.dcf) continue ;; esac
+    # the built design: the new app builds its own (design/build.sh) under its name
+    case "$f" in data/*.dcf|design/*.fig) continue ;; esac
     to=${f/design\/tv-patch.js/design\/$name-patch.js}
     mkdir -p "$dst/$(dirname "$to")"
     case "$f" in
