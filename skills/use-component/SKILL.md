@@ -72,7 +72,7 @@ LIBRARY_DCF=packages/services/display_safety/utils/<name>-app/data/<name>.dcf \
   out_rb3/host/linux-x86/nativetest64/everyware_ui_test/everyware_ui_test
 ```
 
-Then on the device (harry-app skill: build, run, screenshot): press and release it, the
+Then on the device (the new-app skill, steps 7 and 8: build, run, screenshot): press and release it, the
 pressed layer fades, the value moves, the event reaches the app (`log::info!` in the arm).
 Before the commit: `scripts/check.sh`.
 

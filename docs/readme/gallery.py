@@ -5,12 +5,17 @@ see-through glass and are drawn on the light theme's background.
 
 From ui-lib's folder:
 
-    python3 docs/readme/gallery.py docs/assets /tmp/gallery.html
-    google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 \
+    python3 docs/readme/gallery.py docs/assets /tmp/gallery.html \
+        ../../../packages/services/display_safety/utils/tv-app/data
+    google-chrome --headless=new --hide-scrollbars --allow-file-access-from-files \
+        --force-device-scale-factor=2 \
         --window-size=1600,520 --screenshot=docs/readme/components.png file:///tmp/gallery.html
 """
 import os, re, sys
 A, OUT = sys.argv[1:3]
+# the device's font (regular and bold; a medium weight is drawn regular), so that the picture
+# does not fall back to the host's system font
+FONTS = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
 
 def load(path):
     return open(os.path.join(A, path)).read()
@@ -47,7 +52,10 @@ row2 = [('w440', load('list-item/state=default,kind=chevron,lines=two,size=regul
         ('', load('icon-button/kind=glass,state=default,icon=armchair,size=regular.svg')), ('', load('symbol/icon=house.svg')),
         ('', load('button/kind=ghost,state=default,size=regular.svg'))]
 cell = lambda s, c='': f'<div class="{c}">{s}</div>'
-page = f'''<!doctype html><html><head><meta charset="utf-8"><style>
+faces = ''.join(
+    f"@font-face{{font-family:Inter;font-weight:{w};src:url('file://{FONTS}/inter_{n}.otf')}}"
+    for n, w in (('regular', '100 599'), ('bold', '600 900'))) if FONTS else ''
+page = f'''<!doctype html><html><head><meta charset="utf-8"><style>{faces}
 body{{margin:0;font-family:Inter,system-ui,sans-serif}}
 .c{{width:1600px;height:520px;padding:64px;box-sizing:border-box;background:linear-gradient(135deg,#dfe7f3,#eef3f9);display:flex;flex-direction:column;gap:36px}}
 svg{{display:block;height:auto;filter:drop-shadow(0 8px 24px rgba(36,54,76,.12))}}
