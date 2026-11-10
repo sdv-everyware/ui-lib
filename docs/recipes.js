@@ -117,8 +117,8 @@ const R = {
     state: 'pub F: Tile,', init: 'F: Tile::new(TileKind::Slider, SymbolIcon::BedDouble, "Bedroom", "Lights").value("65%"),',
     model: 'F: Slot = "SLOT" ["SlotCustomizer"];',
     present: 'model.F = slot("SLOT", &state.F);',
-    act: ['"SLOT" => {', '    if let Some(TileEvent::Opened) = state.F.on(gesture) {', '        // yours: open the device\'s sheet', '    }', '}'],
-    note: 'The whole card is one touch target; the control inside shows the device (`state.F.toggle`, `.slider`, `.segmented`, `.value`) and takes no taps: the device\'s sheet changes it.',
+    act: ['"SLOT" => {', '    if let Some(TileEvent::Opened) = state.F.on(gesture) {', '        // yours: open the device\'s sheet', '    }', '}', '// the control inside the card, by its part: state.F.on_part(Some(part), gesture, tile_x, tile_y)', '// gives Toggled, Moving and Level, Mode or Step (in a list: row_of and part_of on the node)'],
+    note: 'A tap on the card opens the device; the control inside (`state.F.toggle`, `.slider`, `.segmented`) takes its own taps through `on_part`. The app\'s listener returns the status `Input::feed` gives.',
   },
   skeleton: {
     use: ['skeleton::{Skeleton, SkeletonKind, SkeletonSize}'],

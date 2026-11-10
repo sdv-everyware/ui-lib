@@ -1,19 +1,24 @@
-//! Tile (#tile): a device's card, the whole card a touch target that opens the device (its
-//! sheet). The variant is the kind of control the card shows and the state (default,
-//! disabled); pressed is #tile/pressed faded in. The card's texts (#tile/title, /subtitle,
-//! /value), its symbol (#tile/symbol/<icon>, one of a stack lit by opacity) and the control
-//! inside it (a toggle, a slider, a segmented button, a stepper's minus and plus, a picture) are
-//! parts the binding sets. The control shows the device's state and takes no taps of its own:
-//! its layers carry the same names in every tile of a screen, so a tap could not tell the tiles
-//! apart; the device's sheet changes it.
+//! Tile (#tile): a device's card. A tap on the card opens the device (its sheet); the control
+//! inside it (a toggle, a slider, a segmented button, a stepper's minus and plus) takes its own
+//! taps and changes the device right there. The variant is the kind of control the card shows
+//! and the state (default, disabled); pressed is #tile/pressed faded in. The card's texts
+//! (#tile/title, /subtitle, /value), its symbol (#tile/symbol/<icon>, one of a stack lit by
+//! opacity) and the control are parts the binding sets.
+//!
+//! The control's layers carry the same names in every tile of a screen (#tile/toggle,
+//! #tile/slider, #segmented/segment-<i>, #tile/minus, #tile/plus). harry hands a touch to every
+//! interactive node under the finger, top-most first, until one is consumed: the control first,
+//! then the card (a list's clone root, with its row). `everyware_ui::Input` pairs the two into
+//! one gesture on "<slot>/<row>/<part>", so a tile knows which of its parts was touched
+//! (`on_part`).
 
 use crate::gesture::Gesture;
 use crate::list_view::Row;
 use crate::pressable::Pressable;
-use crate::segmented::Segmented;
-use crate::slider::Slider;
+use crate::segmented::{Segmented, SegmentedEvent};
+use crate::slider::{Slider, SliderEvent};
 use crate::symbol::SymbolIcon;
-use crate::toggle::Toggle;
+use crate::toggle::{Toggle, ToggleEvent};
 use crate::transitions::{Change, ComponentKind};
 use crate::Component;
 
@@ -66,22 +71,48 @@ pub struct Tile {
     pub image: Option<String>,
     /// Pressed and disabled.
     pub press: Pressable,
+    /// The stepper's minus and plus buttons (kind stepper).
+    pub minus: Pressable,
+    pub plus: Pressable,
     /// The chosen card of a ribbon (a horizontal ListView lifts it).
     pub selected: bool,
 }
 
 /// What a tile reports.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TileEvent {
     /// The card was tapped: open the device.
     Opened,
+    /// The toggle was flipped (kind toggle): the new value.
+    Toggled(bool),
+    /// The slider is being dragged (kind slider): the level under the finger.
+    Moving(f32),
+    /// The slider was released (kind slider): the level.
+    Level(f32),
+    /// A segment was chosen (kind segmented): its index.
+    Mode(usize),
+    /// Minus (-1) or plus (+1) was tapped (kind stepper).
+    Step(i8),
 }
+
+/// Where the parts sit inside the tile (the Library's design, components-patch.js): the
+/// padding, and the slider instance's width. The slider's track is inset TRACK_INSET in it.
+pub const TILE_PAD: f32 = 24.0;
+pub const TILE_SLIDER_W: f32 = 243.0;
+/// The names of the parts a finger can touch inside a tile, as harry reports them.
+pub const PART_TOGGLE: &str = "#tile/toggle";
+pub const PART_SLIDER: &str = "#tile/slider";
+pub const PART_MINUS: &str = "#tile/minus";
+pub const PART_PLUS: &str = "#tile/plus";
+const PART_SEGMENT: &str = "#segmented/segment-";
 
 impl Tile {
     /// A card of `kind` for a device with `symbol`, `title` (the device) and `subtitle` (its room
     /// or state).
     pub fn new(kind: TileKind, symbol: SymbolIcon, title: impl Into<String>, subtitle: impl Into<String>) -> Self {
-        Tile { kind, symbol, title: title.into(), subtitle: subtitle.into(), ..Default::default() }
+        // the slider's track where the design draws it, in the tile's own pixels
+        let slider = Slider::in_slot(0.0, TILE_PAD, TILE_SLIDER_W);
+        Tile { kind, symbol, title: title.into(), subtitle: subtitle.into(), slider, ..Default::default() }
     }
 
     /// The value text.
@@ -93,6 +124,31 @@ impl Tile {
     /// A tap on the card: Opened when the finger goes up over it.
     pub fn on(&mut self, gesture: Gesture) -> Option<TileEvent> {
         self.press.on(gesture).then_some(TileEvent::Opened)
+    }
+
+    /// A gesture on the card (`part` None) or on a part inside it, by the name harry reports
+    /// (`PART_TOGGLE`, `PART_SLIDER`, `#segmented/segment-<i>`, `PART_MINUS`, `PART_PLUS`).
+    /// `x`, `y` is where the tile's top left is on the display (its row's place in the list
+    /// plus the slot's), so the slider can read the finger against its track.
+    pub fn on_part(&mut self, part: Option<&str>, gesture: Gesture, x: f32, y: f32) -> Option<TileEvent> {
+        let Some(part) = part else { return self.on(gesture) };
+        if !self.press.enabled {
+            return None;
+        }
+        match part {
+            PART_TOGGLE if self.kind == TileKind::Toggle => self.toggle.on(gesture).map(|ToggleEvent::Toggled(v)| TileEvent::Toggled(v)),
+            PART_SLIDER if self.kind == TileKind::Slider => match self.slider.on(gesture.shifted(-x, -y))? {
+                SliderEvent::Moving(v) => Some(TileEvent::Moving(v)),
+                SliderEvent::Changed(v) => Some(TileEvent::Level(v)),
+            },
+            PART_MINUS if self.kind == TileKind::Stepper => self.minus.on(gesture).then_some(TileEvent::Step(-1)),
+            PART_PLUS if self.kind == TileKind::Stepper => self.plus.on(gesture).then_some(TileEvent::Step(1)),
+            _ if self.kind == TileKind::Segmented => {
+                let i = part.strip_prefix(PART_SEGMENT)?.parse::<usize>().ok()?.checked_sub(1)?;
+                self.segmented.on(i, gesture).map(|SegmentedEvent::Selected(i)| TileEvent::Mode(i))
+            }
+            _ => None,
+        }
     }
 }
 
@@ -142,6 +198,43 @@ mod tests {
         tile.press.enabled = false;
         assert_eq!(tile.variant(), "kind=slider, state=disabled");
         assert_eq!((tile.on(Gesture::DOWN), tile.on(Gesture::UP)), (None, None));
+    }
+
+    #[test]
+    fn a_part_takes_its_own_taps_and_the_card_only_opens() {
+        use crate::slider::TRACK_INSET;
+        // the card: a tap opens, nothing else changes
+        let mut light = Tile::new(TileKind::Toggle, SymbolIcon::House, "Hall", "On");
+        assert_eq!(light.on_part(None, Gesture::DOWN, 0.0, 0.0), None);
+        assert_eq!(light.on_part(None, Gesture::UP, 0.0, 0.0), Some(TileEvent::Opened));
+        assert!(!light.toggle.value);
+        // the toggle inside it flips
+        light.on_part(Some(PART_TOGGLE), Gesture::DOWN, 0.0, 0.0);
+        assert_eq!(light.on_part(Some(PART_TOGGLE), Gesture::UP, 0.0, 0.0), Some(TileEvent::Toggled(true)));
+        // a part of another kind does nothing
+        assert_eq!(light.on_part(Some(PART_SLIDER), Gesture::DOWN, 0.0, 0.0), None);
+        // the slider reads the finger against its track in the tile's place: a tile at x 558
+        // (row 1 of a ribbon at 96, pitch 462) has its track from 558 + 24 + 20 on
+        let mut dimmer = Tile::new(TileKind::Slider, SymbolIcon::BedDouble, "Bedroom", "Lights");
+        let tile_x = 558.0;
+        let track_x = tile_x + TILE_PAD + TRACK_INSET;
+        let track_w = TILE_SLIDER_W - 2.0 * TRACK_INSET;
+        assert_eq!(dimmer.on_part(Some(PART_SLIDER), Gesture::down(track_x + track_w / 2.0, 0.0), tile_x, 0.0), Some(TileEvent::Moving(50.0)));
+        assert_eq!(dimmer.on_part(Some(PART_SLIDER), Gesture::up(track_x + track_w, 0.0), tile_x, 0.0), Some(TileEvent::Level(100.0)));
+        // the segments by their number, the stepper's buttons
+        let mut fan = Tile::new(TileKind::Segmented, SymbolIcon::Armchair, "Fan", "Office");
+        fan.segmented = Segmented::new(["Low", "Med", "High"]);
+        fan.on_part(Some("#segmented/segment-3"), Gesture::DOWN, 0.0, 0.0);
+        assert_eq!(fan.on_part(Some("#segmented/segment-3"), Gesture::UP, 0.0, 0.0), Some(TileEvent::Mode(2)));
+        assert_eq!(fan.on_part(Some("#segmented/segment-9"), Gesture::UP, 0.0, 0.0), None);
+        let mut climate = Tile::new(TileKind::Stepper, SymbolIcon::Droplets, "Climate", "Whole house");
+        climate.on_part(Some(PART_PLUS), Gesture::DOWN, 0.0, 0.0);
+        assert_eq!(climate.on_part(Some(PART_PLUS), Gesture::UP, 0.0, 0.0), Some(TileEvent::Step(1)));
+        climate.on_part(Some(PART_MINUS), Gesture::DOWN, 0.0, 0.0);
+        assert_eq!(climate.on_part(Some(PART_MINUS), Gesture::UP, 0.0, 0.0), Some(TileEvent::Step(-1)));
+        // disabled: no part answers
+        climate.press.enabled = false;
+        assert_eq!(climate.on_part(Some(PART_PLUS), Gesture::UP, 0.0, 0.0), None);
     }
 
     #[test]

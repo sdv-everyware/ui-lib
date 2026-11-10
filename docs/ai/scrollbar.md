@@ -31,7 +31,8 @@ The thumb of a scrolling list: a vertical progress marker along a track, faded i
   - `pub fn view_h(&self) -> f32`: The viewport's height.
   - `pub fn scroll(&self) -> Scroll`: Where the content is (for the harry glue, which steps a fling itself).
   - `pub fn scroll_at(&self, now: Instant) -> f32`: The scroll at `now`.
-  - `pub fn content_h(&self) -> f32`: The content's height (rows times pitch; the gap after the last row stays).
+  - `pub fn row_offset(&self, row: usize, now: Instant) -> f32`: The content's height (rows times pitch; the gap after the last row stays). Where row `row` starts along the list at `now`, in the slot's pixels (its y, or its x for a horizontal list): a control inside the row takes its place from it.
+  - `pub fn content_h(&self) -> f32`: 
   - `pub fn max_scroll(&self) -> f32`: How far the content scrolls at most.
   - `pub fn thumb(&self, now: Instant) -> f32`: The scrollbar's thumb: where (0..100) along the track; 0 when nothing scrolls.
   - `pub fn selected(&self) -> Option<usize>`: The selected row.
@@ -54,21 +55,6 @@ model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &state.list);
 ```
 
 Display only: it follows the `ListView` of its list (`list`) and fades out when the list stops.
-
-## Live: `#wifi/scrollbar` in smarthome-app (cut from the sources at build time)
-
-```rust
-// state.rs:141
-/// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
-pub list: ListView,
-list: ListView::new([], LIST_H, ROW_PITCH),
-
-// ui_model.rs:221
-wifi_scrollbar: Slot = "#wifi/scrollbar" ["SlotCustomizer"];
-
-// presenter.rs:62
-model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &wifi.list);
-```
 
 `length` is the thumb's share of the track, as the design draws it; the position `#scrollbar/thumb` is a vertical progress marker (0..100) the code moves with the list's scroll. The scrollbar has no state of its own: `scrollbar("#x", &list)` reads the `ListView` of the rows and fades the thumb out after the list settles.
 

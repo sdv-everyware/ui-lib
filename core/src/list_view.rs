@@ -205,6 +205,12 @@ impl<R: Row> ListView<R> {
     }
 
     /// The content's height (rows times pitch; the gap after the last row stays).
+    /// Where row `row` starts along the list at `now`, in the slot's pixels (its y, or its x
+    /// for a horizontal list): a control inside the row takes its place from it.
+    pub fn row_offset(&self, row: usize, now: Instant) -> f32 {
+        row as f32 * self.pitch - self.scroll_at(now)
+    }
+
     pub fn content_h(&self) -> f32 {
         self.rows.len() as f32 * self.pitch
     }

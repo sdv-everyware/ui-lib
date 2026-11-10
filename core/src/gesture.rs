@@ -70,6 +70,16 @@ impl Gesture {
     pub fn up(x: f32, y: f32) -> Gesture {
         Gesture::Up { x, y, inside: true, velocity: 0.0, velocity_x: 0.0 }
     }
+    /// The same gesture with the finger's position moved by (dx, dy): a control inside a
+    /// row gets the gesture in the row's coordinates.
+    pub fn shifted(self, dx: f32, dy: f32) -> Gesture {
+        match self {
+            Gesture::Down { x, y } => Gesture::Down { x: x + dx, y: y + dy },
+            Gesture::Move { x, y, inside } => Gesture::Move { x: x + dx, y: y + dy, inside },
+            Gesture::Up { x, y, inside, velocity, velocity_x } => Gesture::Up { x: x + dx, y: y + dy, inside, velocity, velocity_x },
+            Gesture::Cancel => Gesture::Cancel,
+        }
+    }
 }
 
 /// Turns touch phases (pointer, node under it, x) into gestures on nodes.
@@ -120,6 +130,15 @@ impl GestureTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shifted_moves_the_finger_and_keeps_the_rest() {
+        assert_eq!(Gesture::down(100.0, 50.0).shifted(-96.0, -10.0), Gesture::Down { x: 4.0, y: 40.0 });
+        let up = Gesture::Up { x: 10.0, y: 0.0, inside: false, velocity: 1.0, velocity_x: 2.0 };
+        assert_eq!(up.shifted(5.0, 5.0), Gesture::Up { x: 15.0, y: 5.0, inside: false, velocity: 1.0, velocity_x: 2.0 });
+        assert_eq!(Gesture::Move { x: 1.0, y: 1.0, inside: true }.shifted(1.0, 0.0), Gesture::Move { x: 2.0, y: 1.0, inside: true });
+        assert_eq!(Gesture::Cancel.shifted(9.0, 9.0), Gesture::Cancel);
+    }
 
     #[test]
     fn tap_is_down_then_up_inside() {

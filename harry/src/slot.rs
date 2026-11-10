@@ -18,7 +18,9 @@
 //! and in the presenter `model.reveal = slot("#wifi/reveal", &state.reveal)`.
 //!
 //! - The clone root is interactive; harry reports taps by its name, which `Input` maps back
-//!   to the slot name.
+//!   to the slot name. A control inside a clone (a tile's toggle) is interactive too: harry
+//!   reports it first, the clone root next, and `Input` pairs the two into "<slot>/<row>/<part>"
+//!   (`row_of`, `part_of`).
 //! - Meter value and opacity of a list item only change the display hash
 //!   (pre_render_cache.rs), so a moving thumb or a fading list skips the tree rebuild.
 //! - The variant is the clone's node selector: a state change (pressed) rebuilds the tree,
@@ -86,7 +88,15 @@ pub fn row_name(slot: &str, row: usize) -> String {
 /// row after slot_of), or none for the slot itself (a drag that starts between the rows) and any
 /// other node. `ListView::on` takes it as it is.
 pub fn row_of(slot: &str, node: &str) -> Option<usize> {
-    node.strip_prefix(slot)?.strip_prefix('/')?.parse().ok()
+    node.strip_prefix(slot)?.strip_prefix('/')?.split('/').next()?.parse().ok()
+}
+
+/// The part of a row a node name points at: "<slot>/<row>/<part>" gives "<part>" (a control
+/// inside a tile, by the name harry reports, `tile::PART_TOGGLE` ...); None for the row itself.
+pub fn part_of<'a>(slot: &str, node: &'a str) -> Option<&'a str> {
+    let rest = node.strip_prefix(slot)?.strip_prefix('/')?;
+    let (_row, part) = rest.split_once('/')?;
+    Some(part)
 }
 
 /// The slot a node belongs to, for a node name harry reports: the clone root becomes its
@@ -696,8 +706,10 @@ impl Slotted for Segmented {
 }
 
 /// The card's texts, its symbol (one glyph of the stack lit), pressed, the picture, and the
-/// control inside it as its own binding sets it (the same part names), with no taps of its own:
-/// the card is the one touch target. Parts of other kinds' controls are not in every variant.
+/// control inside it as its own binding sets it (the same part names). The control takes taps
+/// of its own: its node is interactive in the clone, harry reports it first and the card (the
+/// clone root with its row) next, and `Input` pairs the two (tile.rs). Parts of other kinds'
+/// controls are not in every variant.
 impl Slotted for Tile {
     const SET: &'static str = "#tile";
     fn parts(&self, item: ComponentItem) -> ComponentItem {
@@ -714,14 +726,16 @@ impl Slotted for Tile {
             let n = format!("#tile/symbol/{}", icon.name());
             item = item.opacity(n.clone(), Meter::new(if *icon == self.symbol { 100.0 } else { 0.0 }, None)).optional(n);
         }
-        // the control of this kind, its parts in this kind's variants only
+        // the control of this kind, its parts in this kind's variants only; the control takes
+        // taps while the card is enabled
+        let taps = self.press.enabled;
         match self.kind {
-            TileKind::Toggle => self.toggle.parts(item).optional_under("#toggle/"),
-            TileKind::Slider => self.slider.parts(item).optional_under("#slider/"),
+            TileKind::Toggle => self.toggle.parts(item).interactive(crate::tile::PART_TOGGLE, taps).optional(crate::tile::PART_TOGGLE).optional_under("#toggle/"),
+            TileKind::Slider => self.slider.parts(item).interactive(crate::tile::PART_SLIDER, taps).optional(crate::tile::PART_SLIDER).optional_under("#slider/"),
             TileKind::Segmented => (1..=self.segmented.labels.len())
-                .fold(self.segmented.parts(item), |item, i| item.interactive(format!("#segmented/segment-{i}"), false))
+                .fold(self.segmented.parts(item), |item, i| item.interactive(format!("#segmented/segment-{i}"), taps))
                 .optional_under("#segmented/"),
-            TileKind::Stepper => item,
+            TileKind::Stepper => item.interactive(crate::tile::PART_MINUS, taps).interactive(crate::tile::PART_PLUS, taps).optional(crate::tile::PART_MINUS).optional(crate::tile::PART_PLUS),
             TileKind::Image => match self.image.as_deref().and_then(crate::images::get) {
                 Some(image) => item.image("#tile/image", image),
                 None => item,
@@ -808,6 +822,18 @@ mod tests {
             panic!("a slot formats to a list customization")
         };
         list.items()[0].render_customization()
+    }
+
+    #[test]
+    fn a_row_and_a_part_are_read_off_the_node_name() {
+        assert_eq!(row_of("#tv/cards", "#tv/cards/3"), Some(3));
+        assert_eq!(row_of("#tv/cards", "#tv/cards/3/#tile/toggle"), Some(3));
+        assert_eq!(row_of("#tv/cards", "#tv/cards"), None);
+        assert_eq!(row_of("#tv/cards", "#tv/nav"), None);
+        assert_eq!(part_of("#tv/cards", "#tv/cards/3/#tile/toggle"), Some("#tile/toggle"));
+        assert_eq!(part_of("#tv/cards", "#tv/cards/3/#segmented/segment-2"), Some("#segmented/segment-2"));
+        assert_eq!(part_of("#tv/cards", "#tv/cards/3"), None);
+        assert_eq!(part_of("#tv/cards", "#tv/cards"), None);
     }
 
     #[test]

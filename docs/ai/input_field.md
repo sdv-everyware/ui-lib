@@ -68,16 +68,6 @@ model.wifi_password = slot("#wifi/password", &state.wifi_password);
 }
 ```
 
-## Live: `#wifi/password` in smarthome-app (cut from the sources at build time)
-
-```rust
-// ui_model.rs:212
-wifi_password: Slot = "#wifi/password" ["SlotCustomizer"];
-
-// presenter.rs:64
-model.wifi_password = slot("#wifi/password", wifi.password());
-```
-
 `state` is `default`, `disabled` or `error`. Focus (`#input-field/focus`), the blinking caret (`#input-field/caret`), the placeholder (`#input-field/placeholder`, shown while empty) are opacities; the text is `#input-field/text` (dots while `secure`). `InputField::new(placeholder, helper)`; `on(gesture, now)` answers `Focused`; typing comes through the `Form` from the keyboard.
 
 ## In Figma

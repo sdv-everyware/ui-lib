@@ -45,16 +45,6 @@ model.device_symbol = slot("#device/symbol", &state.device_symbol);
 // actions.rs: nothing, display only
 ```
 
-## Live: `#device/symbol` in smarthome-app (cut from the sources at build time)
-
-```rust
-// ui_model.rs:233
-device_symbol: Slot = "#device/symbol" ["SlotCustomizer"];
-
-// presenter.rs:77
-model.device_symbol = slot("#device/symbol", &Symbol::new(device.view.symbol));
-```
-
 `icon` names the glyph (the design's icons). `Symbol::new(icon)` gives the variant; there is nothing to tap. A symbol is a variant per glyph, so it changes rarely (a sheet opens for another device); in a list row use the stacked `#icon` instead.
 
 ## In Figma
