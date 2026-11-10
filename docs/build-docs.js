@@ -869,7 +869,7 @@ ${STAGES.map(([own, title, file, code, text], i) => `${i + 1}. ${title} (${file}
 - skills/new-app/SKILL.md: a new board as an app of its own from one sentence (scripts/new-app.sh, the design patch, fig-to-dcf.sh, the RB3)
 - skills/ui-component/SKILL.md and traps.md: how to add or change a component (spec, Figma generator, Rust, binding, app)
 - ../everyware/skills/figma-design/SKILL.md: screens, sheets and the designer's prototype
-- ../../../packages/services/display_safety/utils/smarthome-app/docs/harry-app-anatomy.md: a harry app end to end (state, actions, presenter, UI model)
+- skills/harry-app/SKILL.md, reference.md and traps.md: a harry app end to end (state, actions, presenter, UI model, build, run, debug)
 
 ${rules}
 

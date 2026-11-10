@@ -65,6 +65,7 @@ from the start. It picks the skill and follows it to the board:
 | *"Add a switch for the hallway light to the kitchen screen."* | [use-component](skills/use-component/SKILL.md) | The place in the Figma design, the lines in the app, the contract test, the check on the board |
 | *"Tapping the Wi-Fi button opens a sheet with the networks."* | [sheet](skills/sheet/SKILL.md) | The sheet's content in Figma, the sheet in the app: the card that slides, the scrim that fades, the keyboard it moves above |
 | *"Add a chip component to the library."* | [ui-component](skills/ui-component/SKILL.md) | The spec, the Figma component set, the Rust state machine, the binding to harry, the docs |
+| *"The texts on the kitchen screen break into single letters."* | [harry-app](skills/harry-app/SKILL.md) | Finds the cause in the app's traps (here: the fonts the layout helper lacks), fixes it, builds, runs and checks on the board |
 
 Every change ends on a branch of its own. A second agent reviews it with the project's
 [review](https://github.com/sdv-everyware/everyware/tree/main/skills/review) skill, and it lands
@@ -184,7 +185,7 @@ it, run `python3 -m http.server -d docs 8765` and open `http://localhost:8765/si
 | `design/` | The Library in Figma: its generator patches, the dark theme, the fetch to the `.dcf` |
 | `data/library.dcf` | The Library's own design document, which the contract test reads |
 | `docs/` | The reference, the guides, the site and the files for agents |
-| `skills/` | The skills for coding agents |
+| `skills/` | The skills for coding agents: `new-app`, `use-component`, `sheet`, `ui-component`, `harry-app` |
 | `scripts/` | `new-app.sh`, and `check.sh`, the check run before every commit |
 
 ## Build and test
