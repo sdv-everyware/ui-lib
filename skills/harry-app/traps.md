@@ -11,7 +11,7 @@
 | a tap does not reach the app | the layer is hidden in Figma, renamed, or its field has no `interactive` | check the names in the `.dcf`; add `interactive` |
 | part of the screen is below the display | the design is taller than the HDMI mode | ask the user: fill the stage, scale, or move it |
 | about 7 frames a second, one thread at 50 % | harry's VERBOSE logs are formatted every frame | `log::set_max_level(Info)` in `main` and `setprop log.tag INFO` |
-| half the CPU in the kernel (`clone`, `copy_page_range`) | `Command::new("getprop")` forks the big process | read the property with `__system_property_get` through FFI |
+| half the CPU in the kernel (`clone`, `copy_page_range`) | `Command::new("getprop")` forks the big process | read it in the process: `rustutils::android::system_properties::read` from `librustutils` (as `DS/reference/safety-monitor/src/main.rs`) |
 | 20 to 30 frames a second in animations, "tree rebuilt 30/30" | something structural changes every frame | `HAR_PASS_TIMING=1` logs which customization changed; position and opacity are display only, a text or a variant is not |
 | build: `missing documentation for the crate` | `-D missing-docs` | a `//!` comment at the top of `main.rs` |
 | build: `could not find Local in chrono` | Android's chrono has no clock feature | `SystemTime` from std |

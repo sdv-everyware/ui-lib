@@ -1,6 +1,6 @@
 ---
 name: harry-app
-description: Write, build, run and debug a harry app on the EveryWare UI library - the Figma design with #-named layers and its .dcf, the Rust app with State / actions / reducer / presenter / UI model (everyware_ui::ui_model!), fonts, touch, side effects, the build for the RB3 (sdv_media_db845c, out_rb3), the run on the board's HDMI, the log and frame-rate checks. Use when the user asks to change or debug an existing harry app (smarthome-app, tv-app, hub-app, pairs-app or a new one), to add a plain text, a tap or a side effect, to bind a Figma layer to code, to run an app on the RB3, or when an app shows broken text, a black or noisy screen, dead touch or a low frame rate. For a new app from one sentence use new-app; for a library component on a screen use-component; for a sheet sheet.
+description: Write, build, run and debug a harry app on the EveryWare UI library - the Figma design with #-named layers and its .dcf, the Rust app with State / actions / reducer / presenter / UI model (everyware_ui::ui_model!), fonts, touch, side effects, the build for the RB3 (sdv_media_db845c, out_rb3), the run on the board's HDMI, the log and frame-rate checks. Use when the user asks to change or debug an existing harry app (smarthome-app, tv-app, hub-app, pairs-app or a new one), to add a plain text, a tap or a side effect, to bind a plain Figma layer (a text, a tap) to code, to run an app on the RB3, or when an app shows broken text, a black or noisy screen, dead touch or a low frame rate. For a new app from one sentence use new-app; for a library component on a screen, use-component; for a sheet, sheet; for the screens and the prototype in Figma, figma-design.
 ---
 
 # harry apps
@@ -27,23 +27,23 @@ and the user's word. For apps in particular:
 - Every command on the board: one line before it, saying what it does and whether it changes the
   board's state. Changes on the board are runtime only (`stop`, `setprop`, `/data/local/tmp`);
   the image is not changed unless the user asks.
-- harry itself (`DS/framework/...`) changes only with the user's OK, as a commit of its own on
-  `super-harry`.
+- harry itself (`DS/framework/...`) changes only with the user's OK, as a commit of its own in
+  the repository `super-harry`.
 - Layout, resolution and where things go on the screen are the user's decision: offer options.
 
 ## 1. Where an app lives
 
-Under `DS/utils/<name>-app/`, as a git repository of its own. Not elsewhere: libharry,
-libharry_app_utils, libhar_user_input_evdev and libhar_log are visible only to
-`//packages/services/display_safety/...`, and Soong refuses other paths.
+Under `DS/utils/<name>-app/`, as a git repository of its own. Not elsewhere: libharry_app_utils,
+libhar_user_input_evdev and libhar_log are visible only to display_safety's own folders
+(`reference`, `utils`, `service`), and Soong refuses other paths.
 
 ## 2. Workflow
 
 1. **Design.** A Figma frame of the display's size (the RB3's HDMI: 1920 x 1080) named
    `#<app>-root`. Every layer the code touches gets a `#name` (`#home/title`,
    `#room/bedroom/light`); a hidden layer is not in the `.dcf`. An app on the library builds its
-   design from a patch on the Library: `design/build.sh` writes `design/<app>.fig` and
-   `data/<app>.dcf` (the figma-design skill of everyware).
+   design from a patch on the Library: `design/build.sh` writes the app's `.fig` (tv-app:
+   `design/tv.fig`) and `data/<app>.dcf` (the figma-design skill of everyware).
 2. **Fetch, when the design is edited in Figma.** From the tree's top:
    `vendor/sdv-everyware/everyware/scripts/fetch-dcf.sh packages/services/display_safety/utils/<app>-app/data/<app>.dcf <key>`.
    The user exports `FIGMA_TOKEN` and runs it with the file key from
@@ -60,12 +60,14 @@ libharry_app_utils, libhar_user_input_evdev and libhar_log are visible only to
 5. **Build** for the RB3: `m <name>_app` after `source device/rb3/sdv_media_db845c/tools/env.sh`,
    in bash. Show the last lines of the build.
 6. **Run.** `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh` is the model: adb root,
-   stop what holds the display (the installed panel: `stop smarthome`), push the binary and
+   stop what holds the display (the installed panel: `stop smarthome`; the RB3 is shared, so
+   stop only what you started, or ask), push the binary and
    `data/`, `setprop log.tag INFO`, run with the libraries' path and `--touch-size` from
    `/sys/class/drm/card0-HDMI-A-1/modes`. Run it in the background. The new-app skill, step 8,
    has the commands for any app.
 7. **Verify.** The process is alive (`pidof`), `logcat` with the app's tag, the frame rate from
-   the DRM trace (reference.md). Look at the screen before saying it works.
+   the DRM trace (reference.md), a screenshot (the new-app skill, step 8). Look at the screen
+   before saying it works.
 8. **Commit** in the app's repository; update its docs when a new pattern appeared.
 
 ## 3. When something is wrong

@@ -6,7 +6,7 @@ From the tree's top; `DS=packages/services/display_safety`.
 
 ```
 touch / timer / data thread --Actions::CustomAction(a)--> reducer thread (harry's DefaultReducer)
-   a batch: a.apply(&mut state) for each  ->  Presenter::present(&mut model, &state) once
+   a batch: a.apply(&mut state, &mut side_effects) for each  ->  Presenter::present(&mut model, &state) once
    -> pre-render (resolve, layout, animate, display list) -> looper (main thread) -> GPU -> KMS
 ```
 
@@ -32,17 +32,19 @@ written once: it hands each gesture to the app as an action with the node's name
 
 The app declares its model with `everyware_ui::ui_model!` (`ui-lib/harry/src/model.rs`): one line
 per node, `name: Type = "#node"`, then `interactive` for a node that takes taps between its
-children, then the customizer, then `= expr` for a first value.
+children, then the customizer, then `= expr` for a first value. `Meter` and `Position` have no
+first value of their own and always need the `= expr`. smarthome-app keeps a copy of the macro
+with the same syntax in its own `ui_model.rs`; the rows below quote both.
 
 | Type | What it does to the node | In an app |
 |---|---|---|
 | `String` | its text | hub-app `time: String = "#hub/time";` |
 | `Slot` | a library component in its slot (the use-component skill) | hub-app `weather_icon: Slot = "#hub/weather/icon" ["SlotCustomizer"];` |
 | `()` with `interactive` | a node that only takes taps | smarthome-app `_climate_header: () = "#climate/header" interactive;` |
-| `bool` | on or off for a customizer (here: a zone) | smarthome-app `camera_zone: bool = "#camera/feed" ["ZoneCustomizer"]` |
+| `bool` | on or off for a customizer (here smarthome-app's own `ZoneCustomizer`) | smarthome-app `camera_zone: bool = "#camera/feed" ["ZoneCustomizer"]` |
 | `Variant` | which variant of a component set the node shows | smarthome-app `wifi_step: Variant = "#wifi/content"` |
 | `AnimationOverride` | how the next variant change moves | smarthome-app `wifi_step_animation: AnimationOverride = "#wifi/content";` |
-| `Meter` | a value 0 to 100 that a customizer turns into opacity or a meter | smarthome-app `wifi_scrim: Meter = "#wifi/scrim" ["FollowOpacityCustomizer"]` |
+| `Meter` | a value that a customizer turns into an opacity (0 to 100), a meter, or a y in pixels (`FollowYCustomizer`) | smarthome-app `wifi_scrim: Meter = "#wifi/scrim" ["FollowOpacityCustomizer"]` |
 | `Position` | a translation, no layout (cheap: the tree is kept) | smarthome-app `wifi_card: Position = "#wifi/card" ["FollowPositionCustomizer"]` |
 | `TapTarget` | where the taps of a node go | smarthome-app `wifi_scrim_taps: TapTarget = "#wifi/scrim" ["TapTargetCustomizer"];` |
 
@@ -68,9 +70,9 @@ side_effects.push(SideEffects::Custom(AppEvent::SetLight { room, on }));
 actions.send(Actions::CustomAction(AppAction::LightConfirmed { room, on }))
 ```
 
-Example: `DS/utils/gui-playground-app/src/actions.rs`. The EveryWare apps mostly run a thread of
+Example: `DS/utils/gui-playground-app/src/actions.rs`. The four EveryWare apps run threads of
 their own instead (tv-app's `house_link.rs`: the dashboard bundle's gRPC, answers as actions)
-and keep the side effects channel empty.
+and keep the side effects channel empty (`channel::<()>()` with a thread that drains it).
 
 ## Fonts in a .dcf
 
@@ -105,7 +107,7 @@ bash -c 'source device/rb3/sdv_media_db845c/tools/env.sh >/dev/null && m <name>_
 |---|---|
 | adb | over USB; the run scripts take the board's serial from `SERIAL` |
 | display | HDMI 1920 x 1080; the touch reports 0..32767, so `--touch-size 1920x1080` |
-| holds the display | the installed panel, init's service `smarthome` (`stop smarthome`; `start smarthome` brings it back) |
+| holds the display | the installed panel, init's service `smarthome` (`stop smarthome`, `start smarthome` brings it back; the board is shared: stop only what you started, or ask) |
 | a script to copy | `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh` |
 
 Common: `adb root`, then poll until `id -u` is 0; `setprop log.tag INFO`; the libraries' path as
@@ -123,6 +125,6 @@ adb logcat -d | grep "pre-render ms"
 ```
 
 A screen at rest makes no page flips: animate something (a tap) before measuring. The logcat
-ring buffer is 256 KiB: capture while reproducing (`logcat -T 1 | grep ...`). A screenshot needs
-a reader of the framebuffer, as `screencap` needs SurfaceFlinger
-([#20](https://github.com/sdv-everyware/everyware/issues/20)).
+ring buffer is 256 KiB: capture while reproducing (`logcat -T 1 | grep ...`). A screenshot reads
+the framebuffer, as `screencap` needs SurfaceFlinger: the commands are in the new-app skill,
+step 8 ([#20](https://github.com/sdv-everyware/everyware/issues/20) publishes the reader).
