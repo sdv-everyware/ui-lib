@@ -168,6 +168,8 @@ pub fn on_gesture(state: &mut State, node: &str, gesture: Gesture) {
                 // yours: open the device's sheet
             }
         }
+        // the control inside the card, by its part: state.tile.on_part(Some(part), gesture, tile_x, tile_y)
+        // gives Toggled, Moving and Level, Mode or Step (in a list: row_of and part_of on the node)
         _ => {}
     }
 }

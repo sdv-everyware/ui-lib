@@ -35,10 +35,11 @@ pub mod design;
 pub mod images;
 pub mod model;
 mod slot;
-pub use slot::{clone_name, grid, grid_shown, list, row_name, row_of, rows, scrollbar, slot, slot_of, slot_shown, ComponentItem, Slot, SlotCustomizer, Slotted};
+pub use slot::{clone_name, grid, grid_shown, list, part_of, row_name, row_of, rows, scrollbar, slot, slot_of, slot_shown, ComponentItem, Slot, SlotCustomizer, Slotted};
 
 use customizations::render_customizations::{NodePositionOverride, RenderCustomization};
 use customizations::{AnimationOverride, Customizer, CustomizerOutput};
+use har_platform_api::looper::HandleEventStatus;
 use har_platform_api::user_input::{RawInputEventType, UserInputEvent};
 use harry_animation::animations::Animations;
 use harry_animation::api::RepeatType;
@@ -236,36 +237,160 @@ pub fn stamp(velocity: &Velocity, input: &UserInputEvent) {
 /// Turns harry's touch events into gestures on nodes (see GestureTracker): events on a node
 /// (harry's hit test) and raw ones away from every node, which still reach the node the
 /// touch started on (a drag that leaves the row, a lift outside the button).
+///
+/// A control inside a row (a tile's toggle) is a part: its node carries the same name in
+/// every row. harry delivers a touch to every interactive node under the finger, top-most
+/// first, and goes on to the next while the listener answers NotConsumed (as the reference
+/// app does: `reference/harry-app/src/events.rs`). So a part is held back with NotConsumed,
+/// the clone root under it comes next (a row of a list, or the component's plain slot), and
+/// the two make one gesture on "<slot>/<row>/<part>" or "<slot>/<part>" (`row_of`, `part_of`).
+/// A part with nothing under it keeps its own name. The listener returns the status `feed`
+/// gives it.
 #[derive(Debug, Default)]
 pub struct Input {
     tracker: GestureTracker,
     velocity: Option<Velocity>,
+    /// A part's touch start waiting for the node below it: (pointer, part, raw events seen).
+    /// harry sends one raw event after a NotConsumed and one more when no node consumed the
+    /// touch (`dispatch_raw_user_input`): the second raw means the part stands alone.
+    pending: Option<(u64, String, u8)>,
+}
+
+/// The gestures of one event and the answer for harry (see `Input`).
+pub type Fed = (Vec<(String, Gesture)>, HandleEventStatus);
+
+/// Is this node a part inside a row, named the same in every row (tile.rs)?
+fn is_part(node: &str) -> bool {
+    node.starts_with("#tile/") || node.starts_with("#segmented/segment-")
 }
 
 impl Input {
     /// An input that knows the finger's speed (see `stamp`).
     pub fn with_velocity(velocity: Velocity) -> Self {
-        Input { tracker: GestureTracker::default(), velocity: Some(velocity) }
+        Input { tracker: GestureTracker::default(), velocity: Some(velocity), pending: None }
     }
 
-    /// Feeds one event from the UiEventListener; returns the gestures, as (node, gesture).
-    pub fn feed(&mut self, event: &UserInputEvent) -> Vec<(String, Gesture)> {
-        let (raw, node) = match event {
-            // A component in a slot is reported by its clone's name: give the app the slot's.
-            UserInputEvent::TouchEvent(touch) => (&touch.triggering_event, slot_of(&touch.node_id)),
-            UserInputEvent::RawUserInputEvent(raw) => (raw, String::new()),
+    /// Feeds one event from the UiEventListener; returns the gestures, as (node, gesture),
+    /// and the status the listener answers harry with.
+    pub fn feed(&mut self, event: &UserInputEvent) -> Fed {
+        let (raw, hit) = match event {
+            UserInputEvent::TouchEvent(touch) => (&touch.triggering_event, Some(touch.node_id.as_str())),
+            UserInputEvent::RawUserInputEvent(raw) => (raw, None),
             #[allow(unreachable_patterns)]
-            _ => return Vec::new(),
+            _ => return (Vec::new(), HandleEventStatus::Consumed),
         };
         let phase = match raw.event_type {
             RawInputEventType::TouchStart | RawInputEventType::MouseDown => Phase::Start,
             RawInputEventType::TouchEnd | RawInputEventType::MouseUp => Phase::End,
             RawInputEventType::TouchMove | RawInputEventType::MouseMove => Phase::Move,
         };
+        let pointer = raw.pointer_id.unwrap_or(0);
+        let node = match (phase, hit) {
+            // a part's start: wait for the row below it
+            (Phase::Start, Some(hit)) if is_part(hit) && self.pending.is_none() => {
+                self.pending = Some((pointer, hit.to_string(), 0));
+                return (Vec::new(), HandleEventStatus::NotConsumed);
+            }
+            // the row below the part: one gesture on "<slot>/<row>/<part>"; a component in a
+            // slot is reported by its clone's name: the app gets the slot's
+            (Phase::Start, Some(hit)) => match self.pending.take() {
+                Some((p, part, _)) if p == pointer => format!("{}/{part}", slot_of(hit)),
+                _ => slot_of(hit),
+            },
+            // the raw events after a NotConsumed: the second says no row took the part
+            (Phase::Start, None) => match self.pending.take() {
+                Some((p, part, 0)) if p == pointer => {
+                    self.pending = Some((p, part, 1));
+                    return (Vec::new(), HandleEventStatus::Consumed);
+                }
+                Some((p, part, _)) if p == pointer => part,
+                _ => String::new(),
+            },
+            // a move or a lift over the part the touch started on counts as inside it
+            (_, Some(hit)) => match self.tracker.active(pointer) {
+                Some(start) if is_part(hit) && start.ends_with(&format!("/{hit}")) => start.to_string(),
+                _ => slot_of(hit),
+            },
+            (_, None) => String::new(),
+        };
         let velocity = match (phase, &self.velocity) {
             (Phase::End, Some(v)) => v.lock().map(|v| (v.velocity_x(), v.velocity())).unwrap_or((0.0, 0.0)),
             _ => (0.0, 0.0),
         };
-        self.tracker.feed(raw.pointer_id.unwrap_or(0), phase, &node, raw.x as f32, raw.y as f32, velocity)
+        (self.tracker.feed(pointer, phase, &node, raw.x as f32, raw.y as f32, velocity), HandleEventStatus::Consumed)
+    }
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::*;
+    use har_platform_api::looper::DisplayId;
+    use har_platform_api::user_input::{RawUserInputEvent, TouchEvent};
+
+    fn raw(event_type: RawInputEventType, x: f64) -> RawUserInputEvent {
+        RawUserInputEvent { display_id: DisplayId::new(0), x, y: 0.0, event_type, pointer_id: Some(1) }
+    }
+    fn touch(node: &str, event_type: RawInputEventType, x: f64) -> UserInputEvent {
+        UserInputEvent::TouchEvent(TouchEvent { triggering_event: raw(event_type, x), node_id: node.to_string() })
+    }
+    fn loose(event_type: RawInputEventType, x: f64) -> UserInputEvent {
+        UserInputEvent::RawUserInputEvent(raw(event_type, x))
+    }
+    /// The gestures, and whether harry may go on to the next node (HandleEventStatus has no
+    /// PartialEq).
+    fn fed(input: &mut Input, event: &UserInputEvent) -> (Vec<(String, Gesture)>, bool) {
+        let (g, s) = input.feed(event);
+        (g, matches!(s, HandleEventStatus::Consumed))
+    }
+    const START: RawInputEventType = RawInputEventType::TouchStart;
+    const MOVE: RawInputEventType = RawInputEventType::TouchMove;
+    const END: RawInputEventType = RawInputEventType::TouchEnd;
+
+    #[test]
+    fn a_part_in_a_row_is_held_back_and_paired_with_the_row() {
+        let mut input = Input::default();
+        // harry: the toggle first (not consumed), its raw event, then the row's clone root
+        assert_eq!(fed(&mut input, &touch("#tile/toggle", START, 400.0)), (vec![], false));
+        assert_eq!(fed(&mut input, &loose(START, 400.0)), (vec![], true));
+        assert_eq!(
+            fed(&mut input, &touch("#tv/cards@$List-r3", START, 400.0)),
+            (vec![("#tv/cards/3/#tile/toggle".to_string(), Gesture::down(400.0, 0.0))], true)
+        );
+        // a move over the toggle stays inside; a lift over the card's root is outside
+        let (g, _) = fed(&mut input, &touch("#tile/toggle", MOVE, 402.0));
+        assert_eq!(g, vec![("#tv/cards/3/#tile/toggle".to_string(), Gesture::Move { x: 402.0, y: 0.0, inside: true })]);
+        let (g, _) = fed(&mut input, &touch("#tv/cards@$List-r3", END, 300.0));
+        assert_eq!(g, vec![("#tv/cards/3/#tile/toggle".to_string(), Gesture::Up { x: 300.0, y: 0.0, inside: false, velocity: 0.0, velocity_x: 0.0 })]);
+    }
+
+    #[test]
+    fn a_part_in_a_plain_slot_is_paired_with_the_slot() {
+        let mut input = Input::default();
+        assert!(!fed(&mut input, &touch("#segmented/segment-2", START, 10.0)).1);
+        assert_eq!(fed(&mut input, &loose(START, 10.0)), (vec![], true));
+        // the slot's clone root (not a row): "<slot>/<part>"
+        assert_eq!(
+            fed(&mut input, &touch("#hub/fan@$List-i", START, 10.0)),
+            (vec![("#hub/fan/#segmented/segment-2".to_string(), Gesture::down(10.0, 0.0))], true)
+        );
+        let (g, _) = fed(&mut input, &touch("#segmented/segment-2", END, 10.0));
+        assert_eq!(g, vec![("#hub/fan/#segmented/segment-2".to_string(), Gesture::up(10.0, 0.0))]);
+    }
+
+    #[test]
+    fn a_part_with_no_row_under_it_keeps_its_name() {
+        let mut input = Input::default();
+        assert!(!fed(&mut input, &touch("#segmented/segment-2", START, 10.0)).1);
+        // the raw after the NotConsumed, then the raw harry sends when nothing consumed
+        assert_eq!(fed(&mut input, &loose(START, 10.0)), (vec![], true));
+        assert_eq!(fed(&mut input, &loose(START, 10.0)), (vec![("#segmented/segment-2".to_string(), Gesture::down(10.0, 0.0))], true));
+    }
+
+    #[test]
+    fn a_plain_node_is_consumed_at_once_by_its_slot_name() {
+        let mut input = Input::default();
+        assert_eq!(fed(&mut input, &touch("#tv/nav/home", START, 1.0)), (vec![("#tv/nav/home".to_string(), Gesture::down(1.0, 0.0))], true));
+        let (g, _) = fed(&mut input, &touch("#tv/cards@$List-r0", START, 1.0));
+        assert_eq!(g, vec![("#tv/nav/home".to_string(), Gesture::Cancel), ("#tv/cards/0".to_string(), Gesture::down(1.0, 0.0))]);
     }
 }

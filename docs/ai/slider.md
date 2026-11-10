@@ -64,29 +64,6 @@ model.bedroom_dimmer = slot("#bedroom/dimmer", &state.bedroom_dimmer);
 
 `frame` is where the design puts the slot: `let frame = sizes.frame("#bedroom/dimmer")` with `sizes = Sizes::load(<the .dcf>)` at the start; the touch area follows the design.
 
-## Live: `#bedroom/dimmer` in smarthome-app (cut from the sources at build time)
-
-```rust
-// state.rs:87
-pub dimmer: Slider,
-dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),
-
-// ui_model.rs:173
-bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];
-
-// presenter.rs:38
-model.bedroom_dimmer = slot("#bedroom/dimmer", &d.dimmer);
-
-// actions.rs:334
-"#bedroom/dimmer" => {
-    // the value follows the finger (SliderEvent::Moving) and is in the slider; the
-    // device gets it when the finger is up
-    if let Some(SliderEvent::Changed(percent)) = d.dimmer.on(gesture) {
-        return Some(Control::Dimmer(percent));
-    }
-}
-```
-
 `state` is `default`, `pressed` or `disabled`. The value (0..100) moves `#slider/fill` (a progress bar) and `#slider/thumb` (a progress marker), display-only, so the thumb follows the finger every frame. `on(gesture)` answers `Moving(value)` while the finger drags and `Changed(value)` when it lifts; the app sends the device the `Changed` value and may show `Moving` live. `Slider::new(value, track_x, track_width)` needs the track's place on the display, because the finger's x is a display coordinate.
 
 ## In Figma

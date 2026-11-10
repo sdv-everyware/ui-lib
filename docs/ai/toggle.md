@@ -59,28 +59,6 @@ model.wifi_reveal = slot("#wifi/reveal", &state.wifi_reveal);
 
 Read the value any time as `state.wifi_reveal.value` (a pub field); `state.wifi_reveal.set(on)` follows the device without a gesture.
 
-## Live: `#wifi/reveal` in smarthome-app (cut from the sources at build time)
-
-```rust
-// state.rs:147
-/// Show the password instead of dots.
-pub reveal: Toggle,
-reveal: Toggle::new(false),
-
-// ui_model.rs:224
-wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];
-
-// presenter.rs:67
-model.wifi_reveal = slot("#wifi/reveal", &wifi.reveal);
-
-// actions.rs:444
-"#wifi/reveal" => {
-    if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
-        wifi.password_mut().secure = !shown;
-    }
-}
-```
-
 `state` is `default`, `pressed` (the thumb stretches under the finger) or `disabled`. On and off are not variants: `#toggle/thumb` is a horizontal progress marker the code moves from 0 to 100, `#toggle/on` the blue track the code fades in, both display-only and animated by the `value` transition (200 ms). `Toggle::set(value)` follows the device without a gesture; `on(gesture)` answers `Toggled(bool)` on a completed tap.
 
 ## In Figma

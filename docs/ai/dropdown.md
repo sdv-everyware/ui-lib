@@ -67,24 +67,6 @@ _ if node.starts_with("#dropdown/item/") => {
 
 The field opens and closes the list (`on_field`); an item reports by its own name, one open list at a time.
 
-## Live: `#status/presence` in smarthome-app (cut from the sources at build time)
-
-```rust
-// state.rs:76
-/// Status row: who is home, and the Wi-Fi indicator that opens the sheet.
-pub presence: Dropdown,
-presence: Dropdown::new(["At home", "Away", "Asleep"]),
-
-// ui_model.rs:159
-presence: Slot = "#status/presence" ["SlotCustomizer"];
-
-// presenter.rs:26
-model.presence = slot("#status/presence", &d.presence);
-
-// actions.rs:297
-"#status/presence" => d.presence.on_field(gesture),
-```
-
 `state` is `default` or `disabled`. Open is `#dropdown/list` faded in, the chosen row `#dropdown/item/N/selected` lit, both display-only. The pill shows the selected item's text (`#dropdown/value`); the items report taps by their own names (`#dropdown/item/2`), unambiguous while one dropdown is open on the screen. `on_field(gesture)` opens and closes, `on_item(i, gesture)` answers `Selected(i)`.
 
 ## In Figma

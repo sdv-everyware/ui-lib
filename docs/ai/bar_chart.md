@@ -42,16 +42,6 @@ model.weather_chart = slot("#weather/chart", &state.weather_chart);
 
 Display only; `BarChart::new(bars)` takes up to 24 (level 0..100, accent) pairs. The app scales its data to levels and decides which bars are accented.
 
-## Live: `#weather/chart` in smarthome-app (cut from the sources at build time)
-
-```rust
-// ui_model.rs:196
-weather_chart: Slot = "#weather/chart" ["SlotCustomizer"];
-
-// presenter.rs:139
-model.weather_chart = slot("#weather/chart", &chart);
-```
-
 `#bar-chart` has one variant, `bars=24`: `#bar-chart/bar/<1..24>` are vertical progress bar meters (the level, 0..100), `#bar-chart/bar/<i>/accent` is the same bar in the accent colour, shown by opacity. `BarChart::new(bars)` takes (level, accent) pairs; it clamps a level to 0..100 and does nothing else. Scaling data to levels (a day's temperatures to the chart's height) and choosing the accented bars (the hours with rain) is the app's presenter.
 
 ## In Figma

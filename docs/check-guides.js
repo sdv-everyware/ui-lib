@@ -37,6 +37,7 @@ const partNames = new Set([...rust.matchAll(/"(#[\w-]+\/[\w\/-]+)"/g)].map(m => 
 const placeholder = (n) => /[<>…]|^#x\b|\/x\b|\/N\b|<i>|^#(name|names|node)$/.test(n) || /\/\.\.\./.test(n);
 
 // 1. the guides
+const unchecked = new Set();   // app names with no design to check them against
 const content = path.join(ROOT, 'docs/content');
 for (const f of APP_MODE ? [] : fs.readdirSync(content).filter(f => f.endsWith('.md'))) {
   const text = fs.readFileSync(path.join(content, f), 'utf8');
@@ -49,6 +50,9 @@ for (const f of APP_MODE ? [] : fs.readdirSync(content).filter(f => f.endsWith('
     if (placeholder(name)) continue;
     if (name.includes('/') ? (partNames.has(name) || dcfHas(name)) : (dcfHas(name) || partNames.has(name) || [...partNames].some(p => p.startsWith(name + '/')))) continue;
     if (/^#(kbd|chart|dropdown\/item|segmented\/segment|tabs\/tab|list-item\/leading|tile\/symbol)/.test(name)) continue;   // indexed parts
+    // an app's name (#wifi/password) can only be checked against the app's design; a tree
+    // without the app has none: the library's parts above are still checked
+    if (!dcf) { unchecked.add(name); continue; }
     problems.push(`docs/content/${f}: ${name} is neither a node of the design (${path.relative(TREE, DCF)}) nor a part the code sets`);
   }
 }
@@ -62,4 +66,4 @@ if (!process.argv.includes('--app')) { /* guides only */ } else if (fs.existsSyn
 } else problems.push(`no app or .dcf to check (${path.relative(TREE, uiModel)}, ${path.relative(TREE, DCF)})`);
 
 if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
-console.log(process.argv.includes('--app') ? `app: every slot of ui_model.rs is a node of ${path.basename(DCF)}` : `guides: ${fs.readdirSync(content).filter(f => f.endsWith('.md')).length} files, every library item and #name they name exists`);
+console.log(process.argv.includes('--app') ? `app: every slot of ui_model.rs is a node of ${path.basename(DCF)}` : `guides: ${fs.readdirSync(content).filter(f => f.endsWith('.md')).length} files, every library item and #name they name exists` + (unchecked.size ? ` (${unchecked.size} app names not checked: no design at ${path.relative(TREE, DCF)})` : ''));
