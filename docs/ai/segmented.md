@@ -63,7 +63,7 @@ _ if node.starts_with("#segmented/segment-") => {
 ## Live: `#office/fan` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:89
+// state.rs:92
 /// The Office fan's mode.
 pub fan: Segmented,
 fan: Segmented::new(["Low", "Med", "High"]),
@@ -74,7 +74,7 @@ office_fan: Slot = "#office/fan" ["SlotCustomizer"];
 // presenter.rs:40
 model.office_fan = slot("#office/fan", &d.fan);
 
-// actions.rs:342
+// actions.rs:340
 _ if part_of("#office/fan", node).is_some() => {
     // the fan's segments, "#office/fan/#segmented/segment-<i>" (the part with its slot)
     if let Some(n) = part_of("#office/fan", node)

@@ -70,7 +70,7 @@ The field opens and closes the list (`on_field`); an item reports by its own nam
 ## Live: `#status/presence` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:76
+// state.rs:79
 /// Status row: who is home, and the Wi-Fi indicator that opens the sheet.
 pub presence: Dropdown,
 presence: Dropdown::new(["At home", "Away", "Asleep"]),
@@ -81,7 +81,7 @@ presence: Slot = "#status/presence" ["SlotCustomizer"];
 // presenter.rs:26
 model.presence = slot("#status/presence", &d.presence);
 
-// actions.rs:298
+// actions.rs:296
 "#status/presence" => d.presence.on_field(gesture),
 ```
 

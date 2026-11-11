@@ -68,7 +68,7 @@ model.wifi_cancel = slot("#wifi/cancel", &state.wifi_cancel);
 ## Live: `#wifi/cancel` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:144
+// state.rs:147
 pub cancel: Button,
 cancel: Button::new(ButtonKind::Secondary, "Cancel"),
 
@@ -78,7 +78,7 @@ wifi_cancel: Slot = "#wifi/cancel" ["SlotCustomizer"];
 // presenter.rs:66
 model.wifi_cancel = slot("#wifi/cancel", &wifi.cancel);
 
-// actions.rs:431
+// actions.rs:429
 "#wifi/cancel" => {
     if wifi.cancel.on(gesture) == Some(ButtonEvent::Clicked) {
         match wifi.step {

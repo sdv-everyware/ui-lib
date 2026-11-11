@@ -95,7 +95,7 @@ HomeAction::Gesture(node, gesture) if node == "#status/wifi" => {
     // the Wi-Fi indicator opens the sheet; the sheet starts over every time
     if state.dash.wifi.on(*gesture) == Some(ButtonEvent::Clicked) && !state.wifi.form.is_open() {
         state.wifi = WifiSheet::opened(state.wifi.networks.clone(), state.wifi.state.clone());
-        house_link::send_wifi_command(wifi_scan());
+        screen_binder::send_wifi_command(wifi_scan());
     }
 }
 ```

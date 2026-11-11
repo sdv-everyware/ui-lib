@@ -62,7 +62,7 @@ Read the value any time as `state.wifi_reveal.value` (a pub field); `state.wifi_
 ## Live: `#wifi/reveal` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:147
+// state.rs:150
 /// Show the password instead of dots.
 pub reveal: Toggle,
 reveal: Toggle::new(false),
@@ -73,7 +73,7 @@ wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];
 // presenter.rs:67
 model.wifi_reveal = slot("#wifi/reveal", &wifi.reveal);
 
-// actions.rs:447
+// actions.rs:445
 "#wifi/reveal" => {
     if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
         wifi.password_mut().secure = !shown;
