@@ -72,7 +72,7 @@ model.wifi_cancel = slot("#wifi/cancel", &state.wifi_cancel);
 ### Live: `#wifi/cancel` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:147
+// state.rs:144
 pub cancel: Button,
 cancel: Button::new(ButtonKind::Secondary, "Cancel"),
 
@@ -313,7 +313,7 @@ Read the value any time as `state.wifi_reveal.value` (a pub field); `state.wifi_
 ### Live: `#wifi/reveal` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:150
+// state.rs:147
 /// Show the password instead of dots.
 pub reveal: Toggle,
 reveal: Toggle::new(false),
@@ -502,7 +502,7 @@ The field opens and closes the list (`on_field`); an item reports by its own nam
 ### Live: `#status/presence` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:79
+// state.rs:76
 /// Status row: who is home, and the Wi-Fi indicator that opens the sheet.
 pub presence: Dropdown,
 presence: Dropdown::new(["At home", "Away", "Asleep"]),
@@ -630,7 +630,7 @@ A list is a `ListView` of rows (`ListItem`), its slot `interactive`; new rows wi
 ### Live: `#wifi/networks` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:144
+// state.rs:141
 /// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
 pub list: ListView,
 list: ListView::new([], LIST_H, ROW_PITCH),
@@ -747,7 +747,7 @@ Display only: it follows the `ListView` of its list (`list`) and fades out when 
 ### Live: `#wifi/scrollbar` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:144
+// state.rs:141
 /// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
 pub list: ListView,
 list: ListView::new([], LIST_H, ROW_PITCH),
@@ -875,7 +875,7 @@ _ if node.starts_with("#segmented/segment-") => {
 ### Live: `#office/fan` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:92
+// state.rs:89
 /// The Office fan's mode.
 pub fan: Segmented,
 fan: Segmented::new(["Low", "Med", "High"]),
@@ -1375,7 +1375,7 @@ model.bedroom_dimmer = slot("#bedroom/dimmer", &state.bedroom_dimmer);
 ### Live: `#bedroom/dimmer` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:90
+// state.rs:87
 pub dimmer: Slider,
 dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),
 

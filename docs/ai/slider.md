@@ -67,7 +67,7 @@ model.bedroom_dimmer = slot("#bedroom/dimmer", &state.bedroom_dimmer);
 ## Live: `#bedroom/dimmer` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:90
+// state.rs:87
 pub dimmer: Slider,
 dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),
 

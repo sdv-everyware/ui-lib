@@ -68,7 +68,7 @@ model.wifi_cancel = slot("#wifi/cancel", &state.wifi_cancel);
 ## Live: `#wifi/cancel` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:147
+// state.rs:144
 pub cancel: Button,
 cancel: Button::new(ButtonKind::Secondary, "Cancel"),
 

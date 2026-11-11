@@ -246,8 +246,8 @@ state machine and the transitions; the app's generator draws only the content:
 Why the sheets and the dock move instead of switching their variant: on a variant switch
 harry rebuilds the instance's subtree from the new variant and lays the screen out, then
 interpolates every node that exists in both drawings; the first frames of the animation
-stall (on the RB3 frames of 100 to 170 ms while the keyboard dock still switched its variant,
-against 17 ms for a moving card). A position override and an opacity are display-only: no new
+stall (on the RB3 frames of 100 to 170 ms for the keyboard dock switching its variant, against
+17 ms for a moving card). A position override and an opacity are display-only: no new
 tree, no layout. Where a component still switches its variant with an animation:
 
 - every part that moves needs its own `AnimationOverride` field in the UI model: harry takes

@@ -63,7 +63,7 @@ _ if node.starts_with("#segmented/segment-") => {
 ## Live: `#office/fan` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:92
+// state.rs:89
 /// The Office fan's mode.
 pub fan: Segmented,
 fan: Segmented::new(["Low", "Med", "High"]),

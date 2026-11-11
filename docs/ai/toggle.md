@@ -62,7 +62,7 @@ Read the value any time as `state.wifi_reveal.value` (a pub field); `state.wifi_
 ## Live: `#wifi/reveal` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:150
+// state.rs:147
 /// Show the password instead of dots.
 pub reveal: Toggle,
 reveal: Toggle::new(false),
