@@ -44,7 +44,7 @@ toggle: Toggle::new(false),</code></pre><div class="muted">Read the value any ti
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set: the picture on the left is what the device shows.</div></div>
 </div><h3>Live: <code>#wifi/reveal</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:147</div><pre><code class="language-rust">/// Show the password instead of dots.
 pub reveal: Toggle,
-reveal: Toggle::new(false),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:223</div><pre><code class="language-rust">wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:67</div><pre><code class="language-rust">model.wifi_reveal = slot("#wifi/reveal", &amp;wifi.reveal);</code></pre></div><div class="live"><div class="live-h">actions.rs:447</div><pre><code class="language-rust">"#wifi/reveal" =&gt; {
+reveal: Toggle::new(false),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:223</div><pre><code class="language-rust">wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:67</div><pre><code class="language-rust">model.wifi_reveal = slot("#wifi/reveal", &amp;wifi.reveal);</code></pre></div><div class="live"><div class="live-h">actions.rs:445</div><pre><code class="language-rust">"#wifi/reveal" =&gt; {
     if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
         wifi.password_mut().secure = !shown;
     }

@@ -78,7 +78,7 @@ wifi_cancel: Slot = "#wifi/cancel" ["SlotCustomizer"];
 // presenter.rs:66
 model.wifi_cancel = slot("#wifi/cancel", &wifi.cancel);
 
-// actions.rs:431
+// actions.rs:429
 "#wifi/cancel" => {
     if wifi.cancel.on(gesture) == Some(ButtonEvent::Clicked) {
         match wifi.step {

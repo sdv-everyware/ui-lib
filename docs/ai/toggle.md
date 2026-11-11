@@ -73,7 +73,7 @@ wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];
 // presenter.rs:67
 model.wifi_reveal = slot("#wifi/reveal", &wifi.reveal);
 
-// actions.rs:447
+// actions.rs:445
 "#wifi/reveal" => {
     if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
         wifi.password_mut().secure = !shown;

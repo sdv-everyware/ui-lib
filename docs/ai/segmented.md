@@ -74,7 +74,7 @@ office_fan: Slot = "#office/fan" ["SlotCustomizer"];
 // presenter.rs:40
 model.office_fan = slot("#office/fan", &d.fan);
 
-// actions.rs:342
+// actions.rs:340
 _ if part_of("#office/fan", node).is_some() => {
     // the fan's segments, "#office/fan/#segmented/segment-<i>" (the part with its slot)
     if let Some(n) = part_of("#office/fan", node)

@@ -81,7 +81,7 @@ presence: Slot = "#status/presence" ["SlotCustomizer"];
 // presenter.rs:26
 model.presence = slot("#status/presence", &d.presence);
 
-// actions.rs:298
+// actions.rs:296
 "#status/presence" => d.presence.on_field(gesture),
 ```
 

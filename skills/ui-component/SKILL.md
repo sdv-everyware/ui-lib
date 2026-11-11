@@ -241,17 +241,17 @@ state machine and the transitions; the app's generator draws only the content:
 |-----------|-----|------|-------------------|
 | `Sheet` | `#sheet`; the instance's parts renamed `#x/scrim`, `#x/card`, `#x/content` | `Sheet::new(Layout)`, `open()`, `close()`, `is_open()`, `card_position(screen)`, `scrim()`, `transition()` | never sets the sheet's variant (harry would take the Library's variant and lose the instance's names and content); `model.x_card = Position::new(sheet.card_position(SCREEN, free_height), t)` with `FollowPositionCustomizer` (`free_height`: the screen above the keyboard dock while it is open, `KEYBOARD_DOCK_H`; a dialog centres there), `model.x_scrim = Meter::new(sheet.scrim(), t)` with `FollowOpacityCustomizer`, a `TapTarget` on the scrim |
 | `Form` | a `Sheet` with input-field slots in the content (`#wifi/password`) | fields, focus, `on(node, g, now, &mut keyboard) -> Focused \| Edited \| Submitted`, `sheet` | `Form::new(Layout::Dialog, [("#wifi/password", field)])`, acts on `Submitted`; a step is the content's variant (`#wifi/content`, `step=`) |
-| `KeyboardDock` | `#keyboard-dock`, `state=closed\|open`, the slot `#<app>/keys` with `#keyboard` inside, y = 1080 + 40 or 1080 - 420 | `follow(focus)` | one per screen: `state.osk.follow(a.focused().is_some() \|\| b.focused().is_some())` |
+| `KeyboardDock` | `#keyboard-dock`, `state=closed\|open`, the slot `#<app>/keys` with `#keyboard` inside, y = 1080 + 40 or 1080 - 420 | `follow(focus)`, `keys_position(screen)`, `transition()` | one per screen: `state.osk.follow(a.focused().is_some() \|\| b.focused().is_some())`; never sets the dock's variant: `model.osk_keys_position = Position::new(state.osk.keys_position(SCREEN), state.osk.transition())` on the slot with `FollowPositionCustomizer` |
 
-How harry animates the switch: the instance's variant changes, harry rebuilds its subtree
-from the new variant and, for every node that exists in both (same name), interpolates
-position, size, opacity and colour from the old drawing to the new one; a node only in the
-new variant fades in. Two rules follow (traps.md):
+Why the sheets and the dock move instead of switching their variant: on a variant switch
+harry rebuilds the instance's subtree from the new variant and lays the screen out, then
+interpolates every node that exists in both drawings; the first frames of the animation
+stall (on the RB3 frames of 100 to 170 ms for the keyboard dock switching its variant, against
+17 ms for a moving card). A position override and an opacity are display-only: no new
+tree, no layout. Where a component still switches its variant with an animation:
 
 - every part that moves needs its own `AnimationOverride` field in the UI model: harry takes
-  a node's own override, a parent's is not inherited (`squoosh/src/view.rs` animate_changes),
-  so the presenter copies the instance's transition onto `#wifi/scrim`, `#wifi/card`,
-  `#osk/keys`;
+  a node's own override, a parent's is not inherited (`squoosh/src/view.rs` animate_changes);
 - the instance sits in a plain frame with "absolute position" (`Wi-Fi sheet layer`,
   `Keyboard layer`): Figma's import keeps the flag on a frame and drops it on an instance.
 

@@ -77,7 +77,7 @@ bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];
 // presenter.rs:38
 model.bedroom_dimmer = slot("#bedroom/dimmer", &d.dimmer);
 
-// actions.rs:335
+// actions.rs:333
 "#bedroom/dimmer" => {
     // the value follows the finger (SliderEvent::Moving) and is in the slider; the
     // device gets it when the finger is up
