@@ -87,9 +87,10 @@ packages/services/display_safety/utils/kitchen-app/design/build.sh   # the desig
 m kitchen_app
 ```
 
-`new-app.sh` copies tv-app into `packages/services/display_safety/utils/kitchen-app` with its own
-git repository and every name changed. It builds as it is; `design/build.sh` makes its design
-document, and then it runs with tv-app's screen under the new names. Then you change its design
+`new-app.sh` copies [template-app](https://github.com/sdv-everyware/template-app) into
+`packages/services/display_safety/utils/kitchen-app` with its own git repository and every name
+changed. It builds as it is; `design/build.sh` makes its design document, and then it runs with
+the template's screen: the time, a title, a number and a button that counts up. Then you change its design
 and its screen. The full path from an idea to the board is in
 [skills/new-app](skills/new-app/SKILL.md).
 
