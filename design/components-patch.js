@@ -538,12 +538,14 @@ module.exports = function patch(msg, helpers) {
   heading(80, 2420, 'Keyboard');
   const KBD_W = 1920, KBD_H = 420, KEY_W = 150, KEY_H = 84, GAP = 12, PAD_TOP = 24, WIDE = 228;
   componentSet(lib, '#keyboard', 80, 2420, [['state', ['default']]], KBD_W, KBD_H, 0, 0, (s) => {
-    rect(s, 'bg', 0, 0, KBD_W, KBD_H, C.panel, 32, { opacity: 0.96, effects: shadow(-8, 32, 0.08) });
+    // Opaque, no shadow on the dock or the keys: the dock moves over sheets, and every
+    // translucent layer and blurred shadow is drawn again on each frame of the slide (#1).
+    rect(s, 'bg', 0, 0, KBD_W, KBD_H, C.panel, 32);
     const keyNode = (id, x, y, w, label, kind = 'letter') => {
       const fill = kind === 'letter' || kind === 'space' ? C.white : kind === 'done' ? C.accent : C.special;
       const ink = kind === 'done' ? C.white : C.ink;
       const k = frame(s, `#kbd/${id}`, x, y, w, KEY_H);
-      rect(k, 'bg', 0, 0, w, KEY_H, fill, 18, { effects: shadow(2, 4, 0.08) });
+      rect(k, 'bg', 0, 0, w, KEY_H, fill, 18);
       const down = kind === 'done' ? C.accentPressed : kind === 'special' ? C.line : C.special;
       rect(k, `#kbd/${id}/pressed`, 0, 0, w, KEY_H, down, 18, { opacity: 0 });
       const letter = kind === 'letter';
