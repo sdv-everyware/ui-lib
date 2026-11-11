@@ -9,7 +9,8 @@ A harry app is a Rust binary on harry, the UI framework of `packages/services/di
 (DS below): harry draws a Figma design document (`.dcf`) with Impeller on the GPU and drives the
 display with KMS itself, without SurfaceFlinger. An EveryWare app adds the UI library on top.
 
-The reference app is `DS/utils/tv-app` (the template of `scripts/new-app.sh`). The smart home
+The template is `DS/utils/template-app` (`scripts/new-app.sh` copies it): the smallest app, with
+one library component and no use case. The smart home
 panel `DS/utils/smarthome-app` is the full example; its `docs/harry-app-anatomy.md` explains every
 part with file:line links: read it before writing code. Others: `DS/utils/hub-app` (a grid of
 tiles and a list), `DS/utils/pairs-app` (a game: state over time).

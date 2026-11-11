@@ -1,6 +1,6 @@
 ---
 name: new-app
-description: Make a new EveryWare app (a new screen as its own harry app on the EveryWare UI library) from one sentence, end to end - the layout agreed as an ASCII sketch, the app's repository from the tv-app template (scripts/new-app.sh), the design as a kiwi patch of Library slots, the .fig and the .dcf without Figma (roundtrip.js, fig-to-dcf.sh), the app's state, actions, presenter and UI model, the build for the RB3 and the run on its HDMI with a screenshot. Use when the user asks for a new EveryWare app, board, dashboard, screen or device UI ("a kitchen panel", "an app with only the time", "a launcher like webOS"), or wants to try the library from a new app. For one more control on an existing screen use use-component; for a new component ui-component.
+description: Make a new EveryWare app (a new screen as its own harry app on the EveryWare UI library) from one sentence, end to end - the layout agreed as an ASCII sketch, the app's repository from the template-app template (scripts/new-app.sh), the design as a kiwi patch of Library slots, the .fig and the .dcf without Figma (roundtrip.js, fig-to-dcf.sh), the app's state, actions, presenter and UI model, the build for the RB3 and the run on its HDMI with a screenshot. Use when the user asks for a new EveryWare app, board, dashboard, screen or device UI ("a kitchen panel", "an app with only the time", "a launcher like webOS"), or wants to try the library from a new app. For one more control on an existing screen use use-component; for a new component ui-component.
 ---
 
 # A new EveryWare app from one sentence
@@ -13,8 +13,8 @@ variants into slots under `#<name>-root` of the EveryWare Library .fig (ui-lib `
 
 ```
 sentence ──► 1 layout (ASCII, the user picks) ──► 2 new-app.sh <name>
-                                                   └─ utils/<name>-app   (tv-app renamed, git)
-                                                       └─ design/<name>-patch.js (tv's renamed)
+                                                   └─ utils/<name>-app   (template-app renamed, git)
+                                                       └─ design/<name>-patch.js (the template's, renamed)
          ──► 3 the patch ──► 4 .fig ──► 5 .dcf ──► 6 the app's code ──► 7 m <name>_app ──► 8 RB3
 ```
 
@@ -45,11 +45,12 @@ choice. Only names of generic roles: a new kind of control is a new Library comp
 $UI/scripts/new-app.sh <name>       # [a-z][a-z0-9]*, e.g. kitchen; EVERYWARE_FIGMA=<dir> for another checkout
 ```
 
-It copies tv-app's committed files (no .git, no .dcf), renames every template name (`<name>_app`,
-`<Name>Action`, `#<name>-root`, `#<name>/*`, `/data/local/tmp/<name>`), makes the git repository
-with its first commit; `APP/design/<name>-patch.js` is tv's patch renamed, its root at the next
-free place on Page 1 (it prints where). The copy builds as it is and draws the TV screen under the new names; it
-lists the comments that still describe the TV screen.
+It copies template-app's committed files (no .git, no .dcf, no screenshot), renames every
+template name (`<name>_app`, `<Name>Action`, `#<name>-root`, `#<name>/*`, `/data/local/tmp/<name>`),
+makes the git repository with its first commit; `APP/design/<name>-patch.js` is the template's
+patch renamed, its root at the next free place on Page 1 (it prints where). The copy builds as it
+is and draws the template's screen (the time, a title, a number and a button that counts up)
+under the new names; the README and AGENTS.md say "describe the screen here".
 
 ## 3. The patch: the screen from Library slots
 
@@ -100,13 +101,14 @@ action changes `state.rs`) `->` presenter (`presenter.rs`: state to UI model) `-
   `slot_shown(name, &state.x, shown)`, `list(name, &state.l)`, `grid(name, &state.cells, columns,
   (pitch_x, pitch_y))`, texts; `src/actions.rs`: `on_gesture` per node (`row_of` for a row of a
   list or a cell of a grid: `"#<name>/<grid>/<index>"`).
-- What the screen shows that is the app's own (the template's weather pictures) is the app's:
-  a component set in its design (`design/weather-pictures.js`, `#<name>-weather`) and a type in
-  its code (`src/weather.rs`: `Component` with `ComponentKind::App`, `Slotted` with the set). The
-  library has components only; never add an app's content to ui-lib.
+- What the screen shows that is the app's own is the app's: a component set in its design and a
+  type in its code (`Component` with `ComponentKind::App`, `Slotted` with the set). tv-app's
+  weather pictures are an example (`design/weather-pictures.js`, `#tv-weather`, `src/weather.rs`).
+  The library has components only; never add an app's content to ui-lib.
 - Each component's lines with real names: `$UI/docs/ai/<component>.md` ("In the app").
-- Weather comes from the dashboard bundle (`house_link.rs`, port 7100); the time from `clock.rs`.
-  Delete what the app does not use, and the template's TV comments with it.
+- The time comes from `clock.rs`. Data from a bundle comes on a thread of the app that sends
+  actions (tv-app's `house_link.rs`: the dashboard bundle's gRPC on port 7100). Replace the
+  template's description in the file headers (`new-app.sh` lists them).
 - Fit the README's first paragraph to the app.
 
 ## 7. Build
@@ -128,7 +130,7 @@ other sessions: do not stop or kill what you did not start; ask.
 # read only: who draws now (one app at a time holds the display and port 7100)
 adb shell 'pidof smarthome_app hub_app tv_app; for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q card0 && cat $p/cmdline && echo; done'
 # changes state: stop the one on the screen, by pid (smarthome_app is init's service: stop smarthome)
-adb shell 'kill $(pidof tv_app)'
+adb shell 'kill $(pidof <name>_app)'
 # changes state: the app and its design to /data/local/tmp/<name>, then start it
 adb shell mkdir -p /data/local/tmp/<name>
 adb push out_rb3/target/product/sdv_media_db845c/system/bin/<name>_app /data/local/tmp/<name>/
@@ -168,7 +170,7 @@ what became of them, the built `.fig`, the screenshots from the board), and
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Failed to make Impeller GL context current ... Permission denied" | another app holds `/dev/dri/card0` | step 8's read-only check; stop it only if you started it |
-| the app starts, the weather never comes | another app holds port 7100 | one app at a time |
+| an app that uses the dashboard bundle starts, its data never comes | another app holds port 7100 | one app at a time |
 | a name binds nothing, the slot shows the preview | the patch and `ui_model.rs` disagree | `CHECK` with the name in step 4 |
 | fig-to-dcf.sh: `--local` unknown, or `from_local` missing | run from a tree whose display_safety or external is not on the branches above | run the tree's everyware script |
 | build fails on the template's unused code | `-D warnings` | delete it with the feature (step 6) |
