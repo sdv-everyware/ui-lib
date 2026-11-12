@@ -537,7 +537,7 @@ module.exports = function patch(msg, helpers) {
   // fades in and the label. In an app it sits in a slot like any component (ui-lib slot.rs).
   heading(80, 2420, 'Keyboard');
   const KBD_W = 1920, KBD_H = 420, KEY_W = 150, KEY_H = 84, GAP = 12, PAD_TOP = 24, WIDE = 228;
-  componentSet(lib, '#keyboard', 80, 2420, [['state', ['default']]], KBD_W, KBD_H, 0, 0, (s) => {
+  const kbdSet = componentSet(lib, '#keyboard', 80, 2420, [['state', ['default']]], KBD_W, KBD_H, 0, 0, (s) => {
     // Opaque, no shadow on the dock or the keys: the dock moves over sheets, and every
     // translucent layer and blurred shadow is drawn again on each frame of the slide (#1).
     rect(s, 'bg', 0, 0, KBD_W, KBD_H, C.panel, 32);
@@ -730,13 +730,26 @@ module.exports = function patch(msg, helpers) {
   // two screens side by side are wider than the Library: widen it
   lib.size = { x: Math.max(lib.size.x, 80 + sheetSet.set.size.x + 80), y: lib.size.y };
 
+  // ---- Keyboard dock: the screen's one keyboard (as a system keyboard, not a part of each
+  // sheet), closed below the screen or open at the bottom; #keyboard sits in its slot #osk/keys
+  // (osk: on-screen keyboard). The app keeps its instance closed and moves #osk/keys while a
+  // field has the focus (core/src/dock.rs); the open variant is the designer's view and the
+  // prototype's.
+  const dockY = sheetY + sheetSet.set.size.y + 120;
+  heading(80, dockY, 'Keyboard dock');
+  const dockSet = componentSet(lib, '#keyboard-dock', 80, dockY, [['state', ['closed', 'open']]], SCREEN_W, SCREEN_H, 0, 48, (s, v) => {
+    const keys = kbdSet.symbols['state=default'];
+    const slot = frame(s, '#osk/keys', 0, v.state === 'open' ? SCREEN_H - keys.size.y : SCREEN_H + 40, keys.size.x, keys.size.y);
+    instance(slot, '#osk/keys/preview', 0, 0, keys);
+  }, { rows: true });
+
   // ---- Skeleton: a placeholder while content loads (Material's skeleton loader). Grey shapes
   // where the content will be: a heading bar, four text lines (the last shorter) or a 16:9
   // picture, 440 or 832 wide (a side panel's 880 less 24 a side). The shimmer: three white bands (soft, bright, soft) with one
   // travel, horizontal progress markers at x = 0 (traps.md); the variant clips them, so at
   // meter 0 they wait left of it and nothing shows; over white they are invisible, over the
   // grey shapes they lighten them. The code sweeps them while loading (slot.rs sweep).
-  const skY = sheetY + sheetSet.set.size.y + 120;
+  const skY = dockY + dockSet.set.size.y + 120;
   heading(80, skY, 'Skeleton');
   const SK_W = { regular: 440, wide: 832 }, SK_BAND = [[60, 0.35], [80, 0.7], [60, 0.35]];
   const skH = (kind, w) => kind === 'heading' ? 36 : kind === 'text' ? 100 : Math.round(w * 9 / 16);
@@ -774,6 +787,6 @@ module.exports = function patch(msg, helpers) {
   // go below it (lib.size.y + 80); a fixed height let #list-item grow into #wifi-sheet.
   const bottom = Math.max(...kids(key(lib.guid)).map(n => n.transform.m12 + n.size.y));
   lib.size = { x: lib.size.x, y: Math.ceil(bottom) + 80 };
-  log(`added ${A.count()} nodes: page Components (17 component sets), #ui-gallery on Page 1; Library ${lib.size.x}x${lib.size.y}`);
+  log(`added ${A.count()} nodes: page Components (${nodes.filter(n => n.isStateGroup).length} component sets), #ui-gallery on Page 1; Library ${lib.size.x}x${lib.size.y}`);
   return msg;
 };

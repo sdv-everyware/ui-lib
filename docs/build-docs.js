@@ -242,7 +242,6 @@ main{min-width:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 24px;margin:0 0 18px}
 .steps{padding-left:22px;margin:8px 0}.steps li{margin:12px 0}.steps li strong{color:var(--ink)}
 details.more{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:0 24px;margin:0 0 14px}details.more summary{cursor:pointer;font-weight:600;padding:16px 0;list-style:none;display:flex;align-items:center;gap:10px}details.more summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);transform:rotate(-45deg);transition:transform .15s}details.more[open] summary::before{transform:rotate(45deg)}details.more .body{padding:0 0 18px}
-.usages{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin:8px 0 6px}.usage{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px}.usage svg{width:100%;height:auto;display:block;border-radius:10px}.usage figcaption{font-size:13px;color:var(--ink2);margin-top:8px;line-height:1.5}
 .diagram{width:100%;height:auto;margin:6px 0 10px}
 .previews{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}.preview{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;min-width:160px;cursor:pointer}.preview:hover{border-color:var(--accent)}.preview svg{max-width:240px;max-height:150px;width:auto;height:auto;display:block;margin:0 auto 6px}.preview .name{font:12px ui-monospace,monospace;color:var(--ink2)}.preview .ph{height:56px;display:flex;align-items:center;justify-content:center;color:var(--ink2);font-size:13px}
 .api .fn{margin:10px 0}.api .sig{display:block}.api .doc{color:var(--ink2);font-size:14px;margin:2px 0 0}
@@ -264,7 +263,7 @@ details.more{background:var(--card);border:1px solid var(--line);border-radius:2
 .path .step.lit{background:var(--accent-soft);border-color:var(--accent-soft2)}.path .step.lit::before{background:var(--accent);color:#fff}
 .path .step h4{margin:0 0 4px;font-size:14px}.path .step .muted{font-size:12.5px}.path .step pre{margin:8px 0 0;padding:10px 12px;border-radius:10px}.world pre code{white-space:pre-wrap;word-break:break-word;font-size:12.5px}.world pre{overflow:visible}.path .step pre code{font-size:12.5px}
 .event{font:13px ui-monospace,monospace;color:var(--accent);min-height:20px;margin:8px 0 0 44px}
-.world h2 a.ai{float:right;font-size:12px;font-weight:500;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;text-decoration:none;margin-top:4px}.world h2 a.ai:hover{color:var(--accent);border-color:var(--accent)}.live{margin:8px 0}.live-h{font-size:11.5px;color:var(--ink2);font-family:ui-monospace,monospace;margin:0 0 -6px 4px}.slotname{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13px;color:var(--ink2)}.slotname input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:13px ui-monospace,monospace}
+.world h2 a.ai{float:right;font-size:12px;font-weight:500;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;text-decoration:none;margin-top:4px}.world h2 a.ai:hover{color:var(--accent);border-color:var(--accent)}.slotname{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13px;color:var(--ink2)}.slotname input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:13px ui-monospace,monospace}
 @media (max-width:1000px){.split{grid-template-columns:1fr}}
 .hidden{display:none!important}
 @media (max-width:900px){.wrap{grid-template-columns:1fr}nav{position:static;max-height:none}.hero,.intro{grid-template-columns:1fr}.top input{width:160px}}
@@ -532,7 +531,6 @@ function componentPage(key, c, content, parts) {
 
   // ---- left: the designer's world
   const controls = props.map(([p, vals]) => `<div class="ctl"><label>${p}</label><div class="seg" data-prop="${p}">${vals.map((v, i) => `<button${i === 0 ? ' class="on"' : ''} data-value="${v}">${v}</button>`).join('')}</div></div>`).join('');
-  const usage = (where.figma && where.figma.usage) || [];
   let left = `<h2><b>${esc(title)}</b> in Figma</h2>
 <div class="canvas" id="hero">${names.length ? svgs[names[0]] : `<div class="muted">no preview yet</div>`}</div>
 <div class="hint">${kind === 'display' ? 'display only: nothing to tap' : 'tap or drag the component: the right side shows what happens in the app'}</div>
@@ -544,7 +542,6 @@ function componentPage(key, c, content, parts) {
 <li>Wrap it in a frame (Ctrl/Cmd + Alt + G) of the same size and name the frame <code class="slotref">${SLOT}</code>: that name is the contract with the app.${kind === 'list' ? ' A list is a clipping frame with as many preview rows as it shows; the scrollbar is a slot of its own beside it.' : ''}</li>
 <li>Texts in the preview are placeholders: the app writes into the parts named <code>${esc(c.set)}/…</code>. Nothing hidden.</li>
 </ol>`;
-    if (usage.length) left += `<h3>On the screens now</h3><div class="usages">` + usage.map(u => `<figure class="usage">${fs.readFileSync(path.join(ASSETS, c.set.replace(/^#/, ''), u.file), 'utf8')}<figcaption>slot <code>${esc(u.slot)}</code> in ${esc(u.in)}<br><a class="figma" data-node="${u.id}" href="#">open in Figma</a></figcaption></figure>`).join('') + `</div>`;
   } else left += `<p>A sheet is an instance of the library's <code>#sheet</code> with the app's content component swapped into its slot: see <a href="sheet.html">#sheet</a>.</p>`;
   left += sec('In Figma');
   if (sections['How it behaves']) left += `<h3>How it behaves</h3>${sec('How it behaves')}`;
@@ -581,11 +578,6 @@ ${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</co
 <pre><code class="language-rust">${esc((pr ? pr.model : []).join('\n'))}</code></pre></div>
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set${behaviour.pressed ? ` (<code>${esc(behaviour.pressed)}</code> fades in while pressed)` : ''}: the picture on the left is what the device shows.</div></div>
 </div>`;
-    const live = usage.length ? liveExample(usage[0].slot) : null;
-    if (live) {
-      const block = (stage, file) => live[stage] ? `<div class="live"><div class="live-h">${file}:${live[stage].line}</div><pre><code class="language-rust">${esc(live[stage].code)}</code></pre></div>` : '';
-      right += `<h3>Live: <code>${esc(live.slot)}</code> in ${esc(live.app)}</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div>${block('state', 'state.rs')}${block('ui_model', 'ui_model.rs')}${block('presenter', 'presenter.rs')}${block('actions', 'actions.rs')}`;
-    }
     right += sec('In the app');
     if (sections['From the app']) right += `<h3>From the app</h3>${sec('From the app')}`;
   }
@@ -673,10 +665,10 @@ const aiFirstBlock = () => `<section class="concept aifirst"><h2>For a program</
 <div class="ai-step"><div class="k">1</div><div><b>the task map</b><code>AGENTS.md</code><p>which file to read for which task: put a component on a screen, a sheet, a new component, a screen in Figma, the app</p></div></div>
 <div class="ai-step"><div class="k">2</div><div><b>what the library is</b><code>docs/llms.txt</code><p>the principles, the six stages, the rules, the list of components (2 KB)</p></div></div>
 <div class="ai-step"><div class="k">3</div><div><b>the recipe</b><code>skills/new-app/SKILL.md</code> <code>skills/use-component/SKILL.md</code> <code>skills/sheet/SKILL.md</code> <code>skills/ui-component/SKILL.md</code><p>the steps of one task with the exact files and commands (the open Agent Skills format)</p></div></div>
-<div class="ai-step"><div class="k">4</div><div><b>one component's facts</b><code>docs/ai/&lt;component&gt;.md</code><p>variants, parts, transitions, the Rust API and events, the four lines the app writes, the live lines of the smarthome app, the traps (1-3 KB; all of them: <code>docs/llms-full.txt</code>)</p></div></div>
+<div class="ai-step"><div class="k">4</div><div><b>one component's facts</b><code>docs/ai/&lt;component&gt;.md</code><p>variants, parts, transitions, the Rust API and events, the four lines the app writes, the traps (1-3 KB; all of them: <code>docs/llms-full.txt</code>)</p></div></div>
 <div class="ai-step"><div class="k">5</div><div><b>the check</b><code>everyware_ui_test</code> <code>scripts/check.sh</code><p>the code against the design, the tests and their coverage, the generated files against the sources; a failure says what to change</p></div></div>
 </div>
-<p class="role">The spec (<code>components.json</code>) is read by the Figma generator and the Rust library alike; the docs are generated from the spec, the sources, the binding and the live app. Nothing is written twice, so nothing can disagree.</p></section>`;
+<p class="role">The spec (<code>components.json</code>) is read by the Figma generator and the Rust library alike; the docs are generated from the spec, the sources and the binding. Nothing is written twice, so nothing can disagree.</p></section>`;
 if (PRINCIPLE_TEXT.length !== PRINCIPLE_DIAGRAMS.length) throw new Error(`docs/llms.txt has ${PRINCIPLE_TEXT.length} principles, the site ${PRINCIPLE_DIAGRAMS.length} diagrams`);
 const PRINCIPLES = PRINCIPLE_TEXT.map(([t, x], i) => [t, x, PRINCIPLE_DIAGRAMS[i][0]]);
 const principlesBlock = () => `<section class="concept"><h2>Principles</h2><div class="principles">${PRINCIPLES.map(([t, x, d], i) => `<div class="principle">${d}<h4><span class="n">${i + 1}</span>${t}</h4><p>${x}</p></div>`).join('')}</div></section>`;
@@ -711,48 +703,8 @@ function indexPage() {
 
 // ---------------------------------------------------------------- llms
 
-// The live example: the lines of the smarthome app that drive a slot, found by the slot's name
-// in the app's sources (no markers in the app): the UI model field, the presenter line, the
-// state field it reads and its constructor, the match arm in actions.rs. The app is the one in
-// the tree (EVERYWARE_APP overrides); without it the pages show only the template.
-const APP = process.env.EVERYWARE_APP || path.join(TREE, 'packages/services/display_safety/utils/smarthome-app');
-const appSrc = (f) => { const file = path.join(APP, 'src', f); return fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : null; };
-function liveExample(slot) {
-  const ui = appSrc('ui_model.rs'), pr = appSrc('presenter.rs'), st = appSrc('state.rs'), ac = appSrc('actions.rs');
-  if (!ui || !pr || !st || !ac) return null;
-  const q = `"${slot}"`;
-  const out = { slot, app: path.basename(APP) };
-  const uiI = ui.findIndex(l => l.includes(q) && /:\s*Slot\s*=/.test(l));
-  if (uiI >= 0) out.ui_model = { line: uiI + 1, code: ui[uiI].trim() };
-  const prI = pr.findIndex(l => l.includes(`(${q}`) && /\b(slot|list|scrollbar)\(/.test(l));
-  if (prI >= 0) {
-    out.presenter = { line: prI + 1, code: pr[prI].trim() };
-    // the state field the presenter reads: &d.light, &wifi.connect, &state.osk.keyboard
-    const m = pr[prI].match(/&(?:mut )?(?:[a-z_]+\.)*([a-z_]+)\)/);
-    if (m) {
-      const field = m[1];
-      const stI = st.findIndex(l => new RegExp(`^\\s*pub ${field}:`).test(l));
-      if (stI >= 0) {
-        const doc = []; for (let j = stI - 1; j >= 0 && /^\s*\/\/\//.test(st[j]); j--) doc.unshift(st[j].trim());
-        const init = st.find(l => new RegExp(`^\\s*${field}:\\s*[A-Z]`).test(l));
-        out.state = { line: stI + 1, code: [...doc, st[stI].trim(), ...(init ? [init.trim().replace(/,$/, '') + ','] : [])].join('\n') };
-      }
-    }
-  }
-  // the match arm: from the line with "slot" => to its closing brace at the same indent
-  const acI = ac.findIndex(l => l.includes(q) && /=>/.test(l));
-  if (acI >= 0) {
-    const indent = ac[acI].match(/^\s*/)[0].length;
-    let end = acI;
-    if (/\{\s*$/.test(ac[acI])) { for (let j = acI + 1; j < ac.length; j++) { if (ac[j].match(/^\s*/)[0].length === indent && /^\s*}/.test(ac[j])) { end = j; break; } } }
-    const block = ac.slice(acI, end + 1).map(l => l.slice(Math.min(indent, l.match(/^\s*/)[0].length)));
-    out.actions = { line: acI + 1, code: block.join('\n') };
-  }
-  return out.ui_model || out.presenter || out.actions ? out : null;
-}
-
 // One Markdown file per component for a program: the facts (Figma set and variants, the parts
-// the code sets, the Rust API, the transitions, where it sits on the screens), the four lines
+// the code sets, the Rust API, the transitions), the four lines
 // the app writes, the written guide. docs/ai/<component>.md; llms-full.txt is their concatenation.
 function componentMd(key, c, parts) {
   const content = readContent(key);
@@ -760,8 +712,7 @@ function componentMd(key, c, parts) {
   const r = recipeApi(where);
   const sp = parts[c.set];
   const kind = kindOf(key, content);
-  const usage = (where.figma && where.figma.usage) || [];
-  const slot = usage.length ? usage[0].slot : `#home/${key}`;
+  const slot = `#home/${key}`;
   const field = slot.replace(/^#/, '').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
   const T = where.type || 'Component';
   const L = [];
@@ -773,8 +724,6 @@ function componentMd(key, c, parts) {
   L.push(`- variant string: \`${Object.entries(c.props || {}).map(([p, v]) => `${p}=${v[0]}`).join(', ')}\` (the properties in this order; \`${T}::variant()\` produces it, never typed by hand)`);
   if (c.value) L.push(`- parts the code sets: ${c.value}`);
   if (sp) L.push(`- nodes set by code (\`${sp.type}\`, harry/src/slot.rs): ${sp.names.map(n => `\`${n}\``).join(', ')}`);
-  if (usage.length) L.push(`- on the screens now: ${usage.map(u => `\`${u.slot}\` in ${u.in}${u.id ? ` (node ${u.id})` : ''}`).join('; ')}`);
-  else if (kind !== 'sheet') L.push('- on the screens now: not used yet');
   L.push(`- to place one: a frame named \`#<screen>/<name>\` with an instance of \`${c.set}\` inside (the slot); texts in it are placeholders, nothing hidden`);
   const tr = transitionsOf(key);
   if (tr.length) L.push('', '## Transitions (components.json, through `transition()`)', '', ...tr.map(t => `- ${t.change}: ${t.ms} ms ${t.easing}`));
@@ -804,13 +753,6 @@ function componentMd(key, c, parts) {
         ...(rc.send.length ? ['', '// sending the event on: the app\'s own link to a service', ...rc.send] : []), '```');
       if (rc.note) L.push('', rc.note);
     } else L.push('', '## The app', '', `No Rust binding yet: the app cannot put \`${c.set}\` in a slot (no \`impl Slotted\` in harry/src/slot.rs).`);
-  }
-  const live = usage.length ? liveExample(usage[0].slot) : null;
-  if (live) {
-    L.push('', `## Live: \`${live.slot}\` in ${live.app} (cut from the sources at build time)`, '', '```rust');
-    for (const [stage, file] of [['state', 'state.rs'], ['ui_model', 'ui_model.rs'], ['presenter', 'presenter.rs'], ['actions', 'actions.rs']]) if (live[stage]) L.push(`// ${file}:${live[stage].line}`, live[stage].code, '');
-    if (L[L.length - 1] === '') L.pop();
-    L.push('```');
   }
   if (content && content.body.trim()) L.push('', content.body.trim());
   L.push('', '## Check', '', '- `everyware_ui_test` (host): the variants and parts the code uses exist in the app\'s .dcf', '- `scripts/check.sh` before the commit: tests, coverage, this file regenerated (`node docs/build-docs.js`)');
