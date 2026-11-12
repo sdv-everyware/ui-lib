@@ -80,7 +80,7 @@ impl Initial for Slot {
 /// What a `ui_model!` call site needs in scope: the derives, the traits and types their code
 /// names, the library's field types and customizers.
 pub mod prelude {
-    pub use crate::{FollowOpacityCustomizer, FollowPositionCustomizer, Meter, Position, Slot, SlotCustomizer, TapTarget, TapTargetCustomizer, Variant};
+    pub use crate::{FollowOpacityCustomizer, FollowPositionCustomizer, Meter, Position, ScreenCustomizer, ScreenView, Slot, SlotCustomizer, TapTarget, TapTargetCustomizer, Variant};
     pub use customizations::render_customizations::{DisplayState, List};
     pub use customizations::{AnimationOverride, Customizer, CustomizerOutput, DesignDocument, DesignDocumentRoot, UpdatePolicy};
     pub use derive_customizations::DesignDocument;
@@ -117,4 +117,19 @@ macro_rules! ui_model {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_field_starts_closed_empty_and_without_taps() {
+        // what a node shows before the presenter writes it: a closed overlay, no clone in a
+        // slot, a scrim that takes no taps, no text
+        assert_eq!(Variant::initial(), Variant("state=closed".to_string()));
+        assert_eq!(TapTarget::initial(), TapTarget(false));
+        assert_eq!(<String as Initial>::initial(), "");
+        assert!(<Slot as Initial>::initial().items().is_empty());
+    }
 }

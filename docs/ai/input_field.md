@@ -71,10 +71,10 @@ model.wifi_password = slot("#wifi/password", &state.wifi_password);
 ## Live: `#wifi/password` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// ui_model.rs:211
+// ui_model.rs:221
 wifi_password: Slot = "#wifi/password" ["SlotCustomizer"];
 
-// presenter.rs:64
+// presenter.rs:74
 model.wifi_password = slot("#wifi/password", wifi.password());
 ```
 

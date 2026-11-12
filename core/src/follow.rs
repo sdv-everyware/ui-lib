@@ -57,7 +57,8 @@ impl Follow {
         if target != self.target {
             self.from = shown;
             self.target = target;
-            self.started = Some(now);
+            // a delayed transition starts later: the value stays where it is until then
+            self.started = Some(now + transition.map(|t| t.delay).unwrap_or_default());
             self.duration = transition.map(|t| t.duration).unwrap_or_default();
             self.easing = transition.map(|t| t.easing);
         }
@@ -68,6 +69,9 @@ impl Follow {
 
     fn value_at(&self, now: Instant) -> f32 {
         let (Some(started), Some(easing)) = (self.started, self.easing) else { return self.target };
+        if now < started {
+            return self.from;
+        }
         if self.duration.is_zero() {
             return self.target;
         }
@@ -84,7 +88,7 @@ mod tests {
     use super::*;
 
     fn tr(ms: u64) -> Option<Transition> {
-        Some(Transition { duration: Duration::from_millis(ms), easing: Easing::Linear })
+        Some(Transition { duration: Duration::from_millis(ms), easing: Easing::Linear, delay: Duration::ZERO })
     }
 
     #[test]
@@ -129,5 +133,29 @@ mod tests {
             assert!(v >= last && v <= 1.0, "monotonic, at most 1: {v} at {i}");
             last = v;
         }
+    }
+
+    #[test]
+    fn a_delayed_transition_waits_then_moves() {
+        let t0 = Instant::now();
+        let wait = Some(Transition { duration: Duration::from_millis(100), easing: Easing::Linear, delay: Duration::from_millis(50) });
+        let mut f = Follow::default();
+        f.step(0.0, wait, t0);
+        assert_eq!(f.step(100.0, wait, t0), (0.0, true));
+        assert_eq!(f.step(100.0, wait, t0 + Duration::from_millis(40)), (0.0, true));
+        let (v, moving) = f.step(100.0, wait, t0 + Duration::from_millis(100));
+        assert!((v - 50.0).abs() < 0.5 && moving, "{v}");
+        assert_eq!(f.step(100.0, wait, t0 + Duration::from_millis(150)), (100.0, false));
+    }
+
+    #[test]
+    fn a_delayed_jump_happens_after_the_delay() {
+        let t0 = Instant::now();
+        let jump = Some(Transition { duration: Duration::ZERO, easing: Easing::Linear, delay: Duration::from_millis(300) });
+        let mut f = Follow::default();
+        f.step(100.0, jump, t0);
+        assert_eq!(f.step(0.0, jump, t0), (100.0, true));
+        assert_eq!(f.step(0.0, jump, t0 + Duration::from_millis(200)), (100.0, true));
+        assert_eq!(f.step(0.0, jump, t0 + Duration::from_millis(301)), (0.0, false));
     }
 }

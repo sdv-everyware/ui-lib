@@ -74,6 +74,14 @@ const R = {
     present: 'model.F = slot("SLOT", &state.F);',
     act: ['// the segments report by their own names, #segmented/segment-1 ...', '_ if node.starts_with("#segmented/segment-") => {', '    let n = node["#segmented/segment-".len()..].parse::<usize>().ok().and_then(|n| n.checked_sub(1));', '    if let Some(SegmentedEvent::Selected(i)) = n.and_then(|n| state.F.on(n, gesture)) {', '        let _ = i; // yours: state.F.value() is the label', '    }', '}'],
   },
+  tabs: {
+    use: ['tabs::{Tabs, TabsEvent}', 'screens::Effect', 'part_of', 'ScreenView'],
+    state: 'pub F: Tabs,', init: 'F: Tabs::new(["Overview", "Rooms", "Automations"]),',
+    model: ['F: Slot = "SLOT" ["SlotCustomizer"];', '// one field per screen behind the tabs, the first one shown', 'F_1: ScreenView = "#overview" ["ScreenCustomizer"] = ScreenView { opacity: Meter::new(100.0, None), x: None };'],
+    present: ['model.F = slot("SLOT", &state.F);', '// each screen: its opacity (and x for Effect::Slide) from the effect; 0.0 is its x in the design', 'model.F_1 = ScreenView::new(state.F.screen(0, Effect::Fade, 1920.0), 0.0);'],
+    act: ['// a tab reports with its tab bar: "SLOT/#tabs/tab-2"', '_ if part_of("SLOT", node).is_some() => {', '    let tab = part_of("SLOT", node).and_then(|p| p.strip_prefix("#tabs/tab-")).and_then(|n| n.parse::<usize>().ok());', '    if let Some(TabsEvent::Selected(i)) = tab.and_then(|n| n.checked_sub(1)).and_then(|i| state.F.on(i, gesture)) {', '        let _ = i; // yours: the presenter already shows screen i; send it on here if anyone else needs it', '    }', '}'],
+    note: 'The presenter shows the chosen screen: one `ScreenView` per screen, `state.F.screen(i, effect, width)`. `Effect::Fade` (the default), `FadeThrough`, `Slide` and `None` change how; the time is `tabs`/`switch` in components.json.',
+  },
   slider: {
     use: ['slider::{Slider, SliderEvent}', 'design::Sizes'],
     state: 'pub F: Slider,', init: 'F: Slider::in_slot(65.0, frame.x, frame.width),',

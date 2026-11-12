@@ -96,15 +96,15 @@ A list is a `ListView` of rows (`ListItem`), its slot `interactive`; new rows wi
 ## Live: `#wifi/networks` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:141
+// state.rs:150
 /// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
 pub list: ListView,
 list: ListView::new([], LIST_H, ROW_PITCH),
 
-// ui_model.rs:216
+// ui_model.rs:226
 wifi_networks: Slot = "#wifi/networks" interactive ["SlotCustomizer"];
 
-// presenter.rs:61
+// presenter.rs:71
 model.wifi_networks = list("#wifi/networks", &wifi.list);
 ```
 

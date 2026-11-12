@@ -67,7 +67,7 @@ model.bedroom_dimmer = slot("#bedroom/dimmer", &state.bedroom_dimmer);
 ## Live: `#bedroom/dimmer` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:87
+// state.rs:96
 pub dimmer: Slider,
 dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),
 
@@ -77,7 +77,7 @@ bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];
 // presenter.rs:38
 model.bedroom_dimmer = slot("#bedroom/dimmer", &d.dimmer);
 
-// actions.rs:333
+// actions.rs:345
 "#bedroom/dimmer" => {
     // the value follows the finger (SliderEvent::Moving) and is in the slider; the
     // device gets it when the finger is up

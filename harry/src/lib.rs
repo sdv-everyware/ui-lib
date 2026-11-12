@@ -199,6 +199,49 @@ impl Customizer<Position> for FollowPositionCustomizer {
     }
 }
 
+/// A screen behind tabs, as the screens' effect places it (core screens.rs): its opacity and,
+/// for an effect that moves it, its x in the parent's coordinates. One field per screen:
+/// `#[Design(node = "#rooms", customizer = "ScreenCustomizer")] rooms: ScreenView`.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ScreenView {
+    pub opacity: Meter,
+    pub x: Option<Meter>,
+}
+
+impl ScreenView {
+    /// The view of a screen from its target; `design_x` is where the design puts the screen in
+    /// its parent (Sizes::frame), the offset of a slide is added to it.
+    pub fn new(target: everyware_ui_core::screens::ScreenTarget, design_x: f32) -> Self {
+        ScreenView {
+            opacity: Meter::new(target.opacity, target.opacity_transition),
+            x: target.offset.map(|dx| Meter::new(design_x + dx, target.offset_transition)),
+        }
+    }
+}
+
+/// Fades and moves a screen (see `ScreenView`). One customizer for both, as a screen is one
+/// node; both are display only, so a switch draws from the cache without a new tree.
+#[derive(Clone, Debug, Default)]
+pub struct ScreenCustomizer {
+    opacity: Follow,
+    x: Follow,
+}
+
+impl Customizer<ScreenView> for ScreenCustomizer {
+    fn format(&mut self, view: ScreenView) -> CustomizerOutput {
+        let now = Instant::now();
+        let (opacity, fading) = self.opacity.step(view.opacity.target, view.opacity.transition, now);
+        let mut parts = vec![RenderCustomization::Opacity(opacity / 100.0)];
+        let mut moving = false;
+        if let Some(x) = view.x {
+            let (x, m) = self.x.step(x.target, x.transition, now);
+            moving = m;
+            parts.push(RenderCustomization::NodePositionOverride(NodePositionOverride::new(Some(x), None)));
+        }
+        follow_output(RenderCustomization::Multiple(parts), fading || moving)
+    }
+}
+
 /// A node that takes taps only while `on` (a scrim while its overlay is open: closed, it lies
 /// transparent over the screen and must not catch the taps of what is below). harry makes a
 /// node interactive by its customization, so the field needs this customizer:
@@ -261,7 +304,7 @@ pub type Fed = (Vec<(String, Gesture)>, HandleEventStatus);
 
 /// Is this node a part inside a row, named the same in every row (tile.rs)?
 fn is_part(node: &str) -> bool {
-    node.starts_with("#tile/") || node.starts_with("#segmented/segment-")
+    node.starts_with("#tile/") || node.starts_with("#segmented/segment-") || node.starts_with("#tabs/tab-")
 }
 
 impl Input {
@@ -375,6 +418,39 @@ mod input_tests {
         );
         let (g, _) = fed(&mut input, &touch("#segmented/segment-2", END, 10.0));
         assert_eq!(g, vec![("#hub/fan/#segmented/segment-2".to_string(), Gesture::up(10.0, 0.0))]);
+    }
+
+    #[test]
+    fn a_tab_is_paired_with_its_tab_bar() {
+        // two tab bars on one screen (the header's and a screen's) stay apart by their slots
+        for slot in ["#home/tabs", "#rooms/tabs"] {
+            let mut input = Input::default();
+            assert!(!fed(&mut input, &touch("#tabs/tab-2", START, 10.0)).1);
+            assert_eq!(fed(&mut input, &loose(START, 10.0)), (vec![], true));
+            let want = format!("{slot}/#tabs/tab-2");
+            assert_eq!(fed(&mut input, &touch(&format!("{slot}@$List-i"), START, 10.0)), (vec![(want.clone(), Gesture::down(10.0, 0.0))], true));
+            let (g, _) = fed(&mut input, &touch("#tabs/tab-2", END, 10.0));
+            assert_eq!(g, vec![(want, Gesture::up(10.0, 0.0))]);
+        }
+    }
+
+    #[test]
+    fn a_screen_fades_and_moves_only_for_an_effect_that_moves_it() {
+        use everyware_ui_core::screens::Effect;
+        use everyware_ui_core::tabs::Tabs;
+        let mut tabs = Tabs::new(["Overview", "Rooms", "Automations"]);
+        tabs.select(1);
+        let fade = ScreenView::new(tabs.screen(1, Effect::Fade, 1920.0), 48.0);
+        assert_eq!((fade.opacity.target, fade.x), (100.0, None));
+        let slide = ScreenView::new(tabs.screen(0, Effect::Slide, 1920.0), 48.0);
+        assert_eq!(slide.x.map(|x| x.target), Some(48.0 - 1920.0));
+        // the first frame shows the target at once, without a position for a fade
+        let parts = |v| match ScreenCustomizer::default().format(v).result {
+            RenderCustomization::Multiple(parts) => parts,
+            _ => panic!("a screen is one Multiple"),
+        };
+        assert_eq!(parts(fade), vec![RenderCustomization::Opacity(1.0)]);
+        assert_eq!(parts(slide), vec![RenderCustomization::Opacity(0.0), RenderCustomization::NodePositionOverride(NodePositionOverride::new(Some(48.0 - 1920.0), None))]);
     }
 
     #[test]

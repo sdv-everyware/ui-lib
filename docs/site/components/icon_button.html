@@ -44,7 +44,7 @@ icon_button: IconButton::new(IconButtonKind::Tonal, Icon::Plus),</code></pre></d
 <div class="step" data-stage="4"><h4>ui_model.rs: what to show, by node name</h4><div class="muted">One field per node in <code>everyware_ui::ui_model! { ... }</code>; the <code>SlotCustomizer</code> turns it into harry's customizations.</div>
 <pre><code class="language-rust">icon_button: Slot = "SLOT" ["SlotCustomizer"];</code></pre></div>
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set (<code>#icon-button/pressed</code> fades in while pressed): the picture on the left is what the device shows.</div></div>
-</div><h3>Live: <code>#status/wifi</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:28</div><pre><code class="language-rust">pub wifi: WifiSheet,
+</div><h3>Live: <code>#status/wifi</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:30</div><pre><code class="language-rust">pub wifi: WifiSheet,
 wifi: IconButton::new(IconButtonKind::Glass, Icon::Wifi).compact(),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:159</div><pre><code class="language-rust">wifi_indicator: Slot = "#status/wifi" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:29</div><pre><code class="language-rust">model.wifi_indicator = slot("#status/wifi", &amp;d.wifi);</code></pre></div><div class="live"><div class="live-h">actions.rs:131</div><pre><code class="language-rust">HomeAction::Gesture(node, gesture) if node == "#status/wifi" =&gt; {
     // the Wi-Fi indicator opens the sheet; the sheet starts over every time
     if state.dash.wifi.on(*gesture) == Some(ButtonEvent::Clicked) &amp;&amp; !state.wifi.form.is_open() {
@@ -57,7 +57,7 @@ wifi: IconButton::new(IconButtonKind::Glass, Icon::Wifi).compact(),</code></pre>
 <tr><th>Figma</th><td><a class="figma" data-node="2-51" href="#">#icon-button on the Components page</a> <span class="muted">(set the file key in the menu)</span></td></tr>
 <tr><th>Spec</th><td><code>vendor/sdv-everyware/ui-lib/components.json:5</code> <span class="muted">properties, values, transitions</span></td></tr>
 <tr><th>Rust</th><td><code>vendor/sdv-everyware/ui-lib/core/src/button.rs:157</code> <span class="muted"><code>IconButton</code>, the state machine</span></td></tr>
-<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:611</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
+<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:612</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
 </tbody></table><ol class="steps">
 <li>A property, a value or a transition: <code>components.json</code>; the order of <code>props</code> is the order of the variant name.</li>
 <li>The drawing: the component set <code>#icon-button</code> in the Figma library, every variant; the layers the code sets keep their names <code>#icon-button/&lt;part&gt;</code>, nothing hidden.</li>

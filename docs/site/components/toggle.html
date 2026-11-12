@@ -42,9 +42,9 @@ toggle: Toggle::new(false),</code></pre><div class="muted">Read the value any ti
 <div class="step" data-stage="4"><h4>ui_model.rs: what to show, by node name</h4><div class="muted">One field per node in <code>everyware_ui::ui_model! { ... }</code>; the <code>SlotCustomizer</code> turns it into harry's customizations.</div>
 <pre><code class="language-rust">toggle: Slot = "SLOT" ["SlotCustomizer"];</code></pre></div>
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set: the picture on the left is what the device shows.</div></div>
-</div><h3>Live: <code>#wifi/reveal</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:147</div><pre><code class="language-rust">/// Show the password instead of dots.
+</div><h3>Live: <code>#wifi/reveal</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:156</div><pre><code class="language-rust">/// Show the password instead of dots.
 pub reveal: Toggle,
-reveal: Toggle::new(false),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:223</div><pre><code class="language-rust">wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:67</div><pre><code class="language-rust">model.wifi_reveal = slot("#wifi/reveal", &amp;wifi.reveal);</code></pre></div><div class="live"><div class="live-h">actions.rs:445</div><pre><code class="language-rust">"#wifi/reveal" =&gt; {
+reveal: Toggle::new(false),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:233</div><pre><code class="language-rust">wifi_reveal: Slot = "#wifi/reveal" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:77</div><pre><code class="language-rust">model.wifi_reveal = slot("#wifi/reveal", &amp;wifi.reveal);</code></pre></div><div class="live"><div class="live-h">actions.rs:457</div><pre><code class="language-rust">"#wifi/reveal" =&gt; {
     if let Some(ToggleEvent::Toggled(shown)) = wifi.reveal.on(gesture) {
         wifi.password_mut().secure = !shown;
     }
@@ -54,7 +54,7 @@ reveal: Toggle::new(false),</code></pre></div><div class="live"><div class="live
 <tr><th>Figma</th><td><a class="figma" data-node="2-882" href="#">#toggle on the Components page</a> <span class="muted">(set the file key in the menu)</span></td></tr>
 <tr><th>Spec</th><td><code>vendor/sdv-everyware/ui-lib/components.json:6</code> <span class="muted">properties, values, transitions</span></td></tr>
 <tr><th>Rust</th><td><code>vendor/sdv-everyware/ui-lib/core/src/toggle.rs:12</code> <span class="muted"><code>Toggle</code>, the state machine</span></td></tr>
-<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:618</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
+<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:619</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
 </tbody></table><ol class="steps">
 <li>A property, a value or a transition: <code>components.json</code>; the order of <code>props</code> is the order of the variant name.</li>
 <li>The drawing: the component set <code>#toggle</code> in the Figma library, every variant; the layers the code sets keep their names <code>#toggle/&lt;part&gt;</code>, nothing hidden.</li>

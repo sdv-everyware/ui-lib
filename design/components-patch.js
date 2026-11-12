@@ -29,8 +29,8 @@ const LIBRARY_JSON = process.env.EVERYWARE_LIBRARY_JSON || path.join(__dirname, 
 // The code's changes on top of Figma's sets (figma-tweaks.js has the rules).
 const TWEAKS = require(process.env.EVERYWARE_FIGMA_TWEAKS || path.join(__dirname, 'figma-tweaks.js'));
 const FIGMA = fs.existsSync(LIBRARY_JSON) ? JSON.parse(fs.readFileSync(LIBRARY_JSON, 'utf8')) : { components: {}, code: {}, sets: {} };
-const NAMES = { button: 'Button', icon_button: 'Icon button', toggle: 'Toggle', radio: 'Radio', dropdown: 'Dropdown', list_item: 'List item', slider: 'Slider', input_field: 'Input field', keyboard: 'Keyboard keys', bar_chart: 'Bar chart', overlay: 'Overlay', form: 'Form', keyboard_dock: 'Keyboard dock', icon: 'Icon', scrollbar: 'Scrollbar', sheet: 'Sheet', skeleton: 'Skeleton' };
-const CHANGE = { press: 'default → pressed', release: 'pressed → default', value: 'off ↔ on', open: 'closed → open', close: 'open → closed', select: '→ selected', focus: '→ focused', blur: 'focused →', sweep: 'loading: one pass, repeated' };
+const NAMES = { button: 'Button', icon_button: 'Icon button', toggle: 'Toggle', radio: 'Radio', dropdown: 'Dropdown', list_item: 'List item', slider: 'Slider', input_field: 'Input field', keyboard: 'Keyboard keys', bar_chart: 'Bar chart', overlay: 'Overlay', form: 'Form', keyboard_dock: 'Keyboard dock', icon: 'Icon', scrollbar: 'Scrollbar', sheet: 'Sheet', skeleton: 'Skeleton', segmented: 'Segmented button', tile: 'Tile', tabs: 'Tabs' };
+const CHANGE = { press: 'default → pressed', release: 'pressed → default', value: 'off ↔ on', open: 'closed → open', close: 'open → closed', select: '→ selected', focus: '→ focused', blur: 'focused →', sweep: 'loading: one pass, repeated', switch: 'screen → screen (the screens\' effect)' };
 const TRANSITIONS = SPEC.transitions.map(t => [t.components.map(c => NAMES[c]).join(', '), CHANGE[t.change], `${t.ms} ms`, t.easing])
   .concat([['all', '↔ disabled', 'none', 'changes at once']]);
 

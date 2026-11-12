@@ -29,7 +29,7 @@
     { "components": ["button", "icon_button", "toggle", "radio", "list_item", "slider", "keyboard", "tile"], "change": "press",   "ms": 80,  "easing": "ease-out" },
     { "components": ["button", "icon_button", "toggle", "radio", "list_item", "slider", "keyboard", "tile"], "change": "release", "ms": 160, "easing": "ease-out" },
     { "components": ["toggle"],    "change": "value",  "ms": 200, "easing": "ease-in-out" },
-    { "components": ["radio", "segmented"], "change": "value",  "ms": 160, "easing": "ease-out" },
+    { "components": ["radio", "segmented", "tabs"], "change": "value",  "ms": 160, "easing": "ease-out" },
     { "components": ["slider"],    "change": "value",  "ms": 80,  "easing": "ease-out" },
     { "components": ["overlay", "form", "keyboard_dock", "sheet"], "change": "open",    "ms": 550, "easing": "spring" },
     { "components": ["overlay", "form", "keyboard_dock", "sheet"], "change": "close",   "ms": 400, "easing": "spring" },
@@ -40,6 +40,7 @@
     { "components": ["input_field"], "change": "focus", "ms": 150, "easing": "ease-out" },
     { "components": ["input_field"], "change": "blur",  "ms": 150, "easing": "ease-in" },
     { "components": ["scrollbar", "skeleton"], "change": "hide",  "ms": 250, "easing": "ease-in" },
-    { "components": ["skeleton"],  "change": "sweep", "ms": 1400, "easing": "linear" }
+    { "components": ["skeleton"],  "change": "sweep", "ms": 1400, "easing": "linear" },
+    { "components": ["tabs"],      "change": "switch", "ms": 300, "easing": "ease-out" }
   ]
 }

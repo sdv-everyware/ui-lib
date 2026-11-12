@@ -4,7 +4,7 @@
 
 use everyware_ui::design::{Frame, Sizes};
 use everyware_ui::model::prelude::*;
-use everyware_ui::{list, row_of, scrollbar, slot, Gesture};
+use everyware_ui::{Gesture, ScreenView, list, part_of, row_of, scrollbar, slot};
 use std::time::Instant;
 use everyware_ui::bar_chart::{BarChart};
 use everyware_ui::button::{Button, ButtonEvent, ButtonKind, Icon, IconButton, IconButtonKind};
@@ -14,10 +14,12 @@ use everyware_ui::keyboard::{Keyboard};
 use everyware_ui::list_item::{ListItem, ListItemKind};
 use everyware_ui::list_view::{ListEvent, ListView};
 use everyware_ui::radio::{RadioEvent, RadioGroup};
+use everyware_ui::screens::{Effect};
 use everyware_ui::segmented::{Segmented, SegmentedEvent};
 use everyware_ui::skeleton::{Skeleton, SkeletonKind, SkeletonSize};
 use everyware_ui::slider::{Slider, SliderEvent};
 use everyware_ui::symbol::{Symbol, SymbolIcon};
+use everyware_ui::tabs::{Tabs, TabsEvent};
 use everyware_ui::tile::{Tile, TileEvent, TileKind};
 use everyware_ui::toggle::{Toggle, ToggleEvent};
 
@@ -29,6 +31,7 @@ pub struct State {
     pub dropdown: Dropdown,
     pub list_item: ListView,
     pub segmented: Segmented,
+    pub tabs: Tabs,
     pub slider: Slider,
     pub symbol: Symbol,
     pub keyboard: Keyboard,
@@ -49,6 +52,7 @@ impl State {
             dropdown: Dropdown::new(["At home", "Away", "Asleep"]),
             list_item: ListView::new([ListItem::new(ListItemKind::Plain, "Title", "Supporting text")], 744.0, 72.0 + 8.0),
             segmented: Segmented::new(["Low", "Med", "High"]),
+            tabs: Tabs::new(["Overview", "Rooms", "Automations"]),
             slider: Slider::in_slot(65.0, frame.x, frame.width),
             symbol: Symbol::new(SymbolIcon::House),
             keyboard: Keyboard::default(),
@@ -71,6 +75,9 @@ everyware_ui::ui_model! {
     list_item: Slot = "#doc/list_item" interactive ["SlotCustomizer"];
     scrollbar: Slot = "#doc/scrollbar" ["SlotCustomizer"];
     segmented: Slot = "#doc/segmented" ["SlotCustomizer"];
+    tabs: Slot = "#doc/tabs" ["SlotCustomizer"];
+    // one field per screen behind the tabs, the first one shown
+    tabs_1: ScreenView = "#overview" ["ScreenCustomizer"] = ScreenView { opacity: Meter::new(100.0, None), x: None };
     slider: Slot = "#doc/slider" ["SlotCustomizer"];
     symbol: Slot = "#doc/symbol" ["SlotCustomizer"];
     keyboard: Slot = "#doc/keyboard" ["SlotCustomizer"];
@@ -91,6 +98,9 @@ pub fn present(model: &mut UiModel, state: &State) {
     model.list_item = list("#doc/list_item", &state.list_item);
     model.scrollbar = scrollbar("#doc/scrollbar", &state.list_item);
     model.segmented = slot("#doc/segmented", &state.segmented);
+    model.tabs = slot("#doc/tabs", &state.tabs);
+    // each screen: its opacity (and x for Effect::Slide) from the effect; 0.0 is its x in the design
+    model.tabs_1 = ScreenView::new(state.tabs.screen(0, Effect::Fade, 1920.0), 0.0);
     model.slider = slot("#doc/slider", &state.slider);
     model.symbol = slot("#doc/symbol", &state.symbol);
     model.keyboard = slot("#doc/keyboard", &state.keyboard);
@@ -146,6 +156,13 @@ pub fn on_gesture(state: &mut State, node: &str, gesture: Gesture) {
                 let _ = i; // yours: state.segmented.value() is the label
             }
         }
+        // a tab reports with its tab bar: "#doc/tabs/#tabs/tab-2"
+        _ if part_of("#doc/tabs", node).is_some() => {
+            let tab = part_of("#doc/tabs", node).and_then(|p| p.strip_prefix("#tabs/tab-")).and_then(|n| n.parse::<usize>().ok());
+            if let Some(TabsEvent::Selected(i)) = tab.and_then(|n| n.checked_sub(1)).and_then(|i| state.tabs.on(i, gesture)) {
+                let _ = i; // yours: the presenter already shows screen i; send it on here if anyone else needs it
+            }
+        }
         "#doc/slider" => {
             if let Some(SliderEvent::Changed(value)) = state.slider.on(gesture) {
                 let _ = value; // yours: the finger is up; Moving(value) while it drags
@@ -179,7 +196,7 @@ fn every_recipe_builds_a_model_and_takes_a_tap() {
     let mut state = State::new(&Sizes::none());
     let mut model = UiModel::new(HashMap::new());
     present(&mut model, &state);
-    for node in ["#doc/button", "#doc/icon_button", "#doc/toggle", "#doc/radio/2", "#dropdown/item/1", "#doc/list_item/0", "#segmented/segment-2", "#doc/slider", "#kbd/r1/1", "#doc/input_field", "#doc/tile"] {
+    for node in ["#doc/button", "#doc/icon_button", "#doc/toggle", "#doc/radio/2", "#dropdown/item/1", "#doc/list_item/0", "#segmented/segment-2", "#doc/tabs/#tabs/tab-2", "#doc/slider", "#kbd/r1/1", "#doc/input_field", "#doc/tile"] {
         on_gesture(&mut state, node, Gesture::DOWN);
         on_gesture(&mut state, node, Gesture::UP);
     }
