@@ -2,7 +2,7 @@
 
 The UI component library of SDV EveryWare: Figma component sets (one per role, Material 3 names), Rust state machines (everyware_ui_core), the binding to the harry UI framework (everyware_ui), used by harry apps on embedded devices (no Android framework).
 
-This file is written by hand and is the entry for a program. Everything it points to is a source: nothing under docs/ in git is generated.
+This file is the entry for a program. Everything it points to is a source: nothing under docs/ in git is generated.
 
 ## Principles
 1. One truth, one direction: Action → state → UI model → pixels. Nothing on the screen writes back: a tap is an action like a message from a bundle, so a frame is a function of the state, testable on the host.

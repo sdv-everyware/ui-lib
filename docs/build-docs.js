@@ -7,7 +7,7 @@
 //                            by the Rust library and the Figma generator)
 //   core/src/*.rs            the public API: pub enum / struct / fn with their /// docs
 //   harry/src/slot.rs        the parts of each component the code sets (impl Slotted)
-//   docs/content/<name>.md   what a person writes: the role, how to use it in Figma and in the
+//   docs/content/<name>.md   the guide: the role, how to use it in Figma and in the
 //                            app, the traps; a front matter names the Rust types to document
 //   docs/assets/<set>/<variant>.svg   previews, built here from the Library's .fig (not in git); a placeholder without
 //
@@ -645,7 +645,7 @@ const D = {
   ar: (x1, y1, x2, y2, cls = '', label = '') => `<line class="ar ${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ah)"/>${label ? `<text class="sub" x="${(x1 + x2) / 2}" y="${Math.min(y1, y2) - 4}" text-anchor="middle">${label}</text>` : ''}`,
   no: (x, y) => `<text class="no" x="${x}" y="${y}" text-anchor="middle">✕</text>`,
 };
-// The principles: the text is docs/llms.txt's (written by hand, the entry for a program), the
+// The principles: the text is docs/llms.txt's (a source, the entry for a program), the
 // diagrams are the site's, one per principle in the same order.
 const PRINCIPLE_TEXT = fs.readFileSync(path.join(__dirname, 'llms.txt'), 'utf8').split('## Principles\n')[1].split('\n\n')[0]
   .split('\n').map(l => l.match(/^\d+\. ([^:]+): (.*)$/)).filter(Boolean).map(m => [m[1], m[2]]);

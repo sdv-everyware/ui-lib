@@ -1,6 +1,6 @@
 # Docs of the UI library
 
-We write the guides and examples by hand. A script builds the HTML site and the files for
+The guides and examples here are the sources. A script builds the HTML site and the files for
 coding agents from them. The built files are not in git.
 
 ## What is here
@@ -12,7 +12,7 @@ coding agents from them. The built files are not in git.
 | `content/index.md`, `rules.md` | The overview and the rules every app follows |
 | `examples/<component>.rs` | The example code of one component. The tests compile and run it |
 | `llms.txt` | The entry point for coding agents |
-| `diagrams/` | Diagrams drawn by hand |
+| `diagrams/` | Diagrams of how the library works |
 | `*.js` | The scripts that build the site, check the guides and copy the examples into them |
 
 ## Build and read the site
