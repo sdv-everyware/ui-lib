@@ -5,8 +5,8 @@ description: Put a component of the EveryWare UI library (button, icon button, t
 
 # Put a library component on a screen
 
-Read first: `docs/ai/<component>.md` (the facts of the component: variants, parts, API, events,
-the four lines with a real slot name, where it is used now). Paths below are relative to
+Read first: `docs/content/<component>.md` and `docs/examples/<component>.rs` (the guide and the code; variants in `components.json`, the API in the Rust file the guide names; events,
+the four lines with a real slot name). Paths below are relative to
 `vendor/sdv-everyware/ui-lib`.
 
 ```
@@ -24,7 +24,7 @@ Figma: a slot                 .dcf                 the app: four lines          
 2. Wrap it in a frame of the same size (Ctrl/Cmd + Alt + G) and name the frame
    `#<screen>/<name>` (`#home/night`). The frame is the slot; its name is the contract with
    the app. A list is a clipping frame with as many preview rows as it shows, its scrollbar a
-   slot of its own beside it (`docs/ai/list_item.md`, `docs/ai/scrollbar.md`).
+   slot of its own beside it (`docs/examples/list_item.rs`, `docs/examples/scrollbar.rs`).
 3. Texts and glyphs in the preview are placeholders. Nothing hidden: a hidden layer is
    `display: none` forever in harry.
 4. If the file is generated (the Smart HOme file is: `everyware/design/figma/*-patch.js`), the
@@ -44,7 +44,7 @@ FIGMA_TOKEN=... DCF_CHECK='#smarthome-root #home/title' vendor/sdv-everyware/eve
 
 ## 3. The four lines in the app
 
-From `docs/ai/<component>.md`, section "The app", with your slot name. One component value per
+From `docs/examples/<component>.rs`, the parts between the doc marks, with your slot and field names. One component value per
 place on the screen; the field name is yours.
 
 | File | Line | What it is |

@@ -9,7 +9,7 @@
 //   harry/src/slot.rs        the parts of each component the code sets (impl Slotted)
 //   docs/content/<name>.md   what a person writes: the role, how to use it in Figma and in the
 //                            app, the traps; a front matter names the Rust types to document
-//   docs/assets/<set>/<variant>.png   previews (export-previews.sh); a placeholder without
+//   docs/assets/<set>/<variant>.svg   previews, built here from the Library's .fig (not in git); a placeholder without
 //
 // Usage: node docs/build-docs.js        (from ui-lib; no dependencies)
 'use strict';
@@ -22,6 +22,30 @@ const SPEC = JSON.parse(fs.readFileSync(path.join(ROOT, 'components.json'), 'utf
 const CONTENT = path.join(__dirname, 'content');
 const SITE = path.join(__dirname, 'site');
 const ASSETS = path.join(__dirname, 'assets');
+
+// The previews are built, not committed: the Library's own .fig (design/build-library.sh) drawn
+// by render-previews.js into docs/assets. Again when a source of the Library or of the Figma
+// tools (everyware's design/figma) is newer. Without the tools (ui-lib alone) the pages show
+// placeholders.
+function previews() {
+  const { execFileSync } = require('child_process');
+  const stamp = path.join(ASSETS, 'nodes.json');
+  const design = path.join(ROOT, 'design');
+  const figma = process.env.EVERYWARE_FIGMA || path.resolve(ROOT, '..', 'everyware', 'design', 'figma');
+  const js = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.(js|fig)$/.test(f)).map(f => path.join(dir, f)) : [];
+  const sources = [path.join(ROOT, 'components.json'), path.join(__dirname, 'render-previews.js'), ...js(design), ...js(figma)];
+  if (fs.existsSync(stamp) && sources.every(f => fs.statSync(f).mtimeMs <= fs.statSync(stamp).mtimeMs)) return;
+  if (!fs.existsSync(path.join(figma, 'roundtrip.js'))) { console.warn(`  [previews] no Figma tools at ${figma} (EVERYWARE_FIGMA): placeholders`); return; }
+  try { execFileSync(path.join(design, 'build-library.sh'), { stdio: ['ignore', 'ignore', 'inherit'] }); }
+  catch (e) { console.warn(`  [previews] design/build-library.sh failed: placeholders`); return; }
+  fs.rmSync(ASSETS, { recursive: true, force: true });
+  const out = path.join(require('os').tmpdir(), `everyware-previews-${process.pid}.fig`);
+  try {
+    execFileSync('node', [path.join(figma, 'roundtrip.js'), path.join(design, 'build', 'library.fig'), out,
+      path.join(__dirname, 'render-previews.js')], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
+  } finally { fs.rmSync(out, { force: true }); }
+}
+previews();
 
 // ---------------------------------------------------------------- sources
 
@@ -164,11 +188,16 @@ function markdown(md) {
     if (/^\|/.test(l)) { const rows = []; while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]); const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim())); const body = rows.filter(r => !/^\|(\s*:?-+:?\s*\|)+$/.test(r.trim())); out.push('<table><thead><tr>' + cells(body[0]).map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' + body.slice(1).map(r => '<tr>' + cells(r).map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table>'); continue; }
     if (/^- /.test(l)) { const items = []; while (i < lines.length && /^- /.test(lines[i])) { let item = lines[i++].slice(2); while (i < lines.length && /^  \S/.test(lines[i])) item += ' ' + lines[i++].trim(); items.push(item); } out.push('<ul>' + items.map(x => `<li>${inline(x)}</li>`).join('') + '</ul>'); continue; }
     if (/^\s*$/.test(l)) { i++; continue; }
+    if (/^<!--.*-->\s*$/.test(l)) { i++; continue; }   // a mark (docs/sync-examples.js), not text
     const para = []; while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(```|#|\||- |!\[)/.test(lines[i])) para.push(lines[i++]);
     out.push(`<p>${inline(para.join(' '))}</p>`);
   }
   return out.join('\n');
 }
+// a guide's **What.** and **Why.** paragraphs, set apart (the why with a bar), on every page
+const whatWhy = (html) => html
+  .replace(/<p><strong>What\.<\/strong>/g, '<p class="what"><strong>What.</strong>')
+  .replace(/<p><strong>Why\.<\/strong>/g, '<p class="why"><strong>Why.</strong>');
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // ---------------------------------------------------------------- the pages
@@ -184,6 +213,10 @@ pre .copy{position:absolute;top:10px;right:10px;border:1px solid var(--line);bac
 table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--ink2);font-weight:600}
 h1{font-size:34px;line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}h2{font-size:22px;margin:36px 0 12px}h3{font-size:16px;margin:22px 0 8px;color:var(--ink)}
 .muted{color:var(--ink2);font-size:13.5px}.pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:600;margin:0 6px 6px 0}
+/* getting started: a card per step, the why set apart */
+.quick{margin:0 0 14px}.quick p{margin:6px 0}
+.step-card{margin:18px 0}.step-card h3{margin-top:0;font-size:19px}p.what{margin:8px 0}p.why{margin:8px 0 14px;padding:8px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;color:var(--ink)}
+p.cta{margin:18px 0 6px;font-size:16px}p.cta a{display:inline-block;padding:10px 18px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}p.cta a:hover{text-decoration:none;opacity:.92}
 /* frame */
 .top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--page) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top .in{max-width:1600px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:12px 24px}
@@ -366,7 +399,7 @@ function page(title, nav, body, depth) {
 function navHtml(current, depth) {
   const base = depth ? '../' : '';
   const link = (href, text, on, key) => `<a href="${href}"${on ? ' class="on"' : ''}${key ? ` data-key="${key}"` : ''}>${esc(text)}</a>`;
-  let html = link(`${base}index.html`, 'Start here', current === 'index');
+  let html = link(`${base}index.html`, 'Start here', current === 'index') + link(`${base}getting-started.html`, 'Getting started', current === 'getting-started');
   const placed = new Set();
   for (const [group, keys] of GROUPS) {
     const present = keys.filter(k => SPEC.components[k]);
@@ -460,7 +493,11 @@ function componentPage(key, c, content, parts) {
   const field = name.replace(/-/g, '_');
   const kind = kindOf(key, content);
   const sections = content ? Object.fromEntries(content.body.split(/\n(?=## )/).map(sec => [(sec.match(/^## (.*)/) || [, 'intro'])[1].trim(), sec.replace(/^## .*\n/, '')])) : {};
-  const sec = (h) => sections[h] ? markdown(sections[h]) : '';
+  const sec = (h) => sections[h] ? whatWhy(markdown(sections[h])) : '';
+  // the code of a section, left out where the page shows it already (the walk-through)
+  const secText = (h) => sections[h] ? whatWhy(markdown(sections[h].replace(/<!--.*-->\n```[a-z]*\n[\s\S]*?\n```\n?/g, ''))) : '';
+  // the sections this page places; any other one goes in a card of its own at the end
+  const PLACED = ['intro', 'When to use it', 'In Figma', 'How it behaves', 'Quick start', 'In the app', 'From the app', 'How it works', 'Traps', 'Example'];
   const fileLink = (w) => w ? `<code>${w.rel}${w.line > 1 ? ':' + w.line : ''}</code>` : '<span class="muted">not found</span>';
   const role = content ? content.meta.role || '' : (c.value || '').split(/[.;]/)[0];
   const svgs = variantSvgs(c); const names = Object.keys(svgs);
@@ -510,16 +547,22 @@ function componentPage(key, c, content, parts) {
     if (usage.length) left += `<h3>On the screens now</h3><div class="usages">` + usage.map(u => `<figure class="usage">${fs.readFileSync(path.join(ASSETS, c.set.replace(/^#/, ''), u.file), 'utf8')}<figcaption>slot <code>${esc(u.slot)}</code> in ${esc(u.in)}<br><a class="figma" data-node="${u.id}" href="#">open in Figma</a></figcaption></figure>`).join('') + `</div>`;
   } else left += `<p>A sheet is an instance of the library's <code>#sheet</code> with the app's content component swapped into its slot: see <a href="sheet.html">#sheet</a>.</p>`;
   left += sec('In Figma');
+  if (sections['How it behaves']) left += `<h3>How it behaves</h3>${sec('How it behaves')}`;
 
   const pr = recipe(key, SLOT, field, 'list');
   // ---- right: the developer's world: the path of an event, lit by the simulation
-  let right = `<h2><b>${esc(title)}</b> in the app <a class="ai" href="../../ai/${key}.md" title="this component as one Markdown file for a program">for AI: docs/ai/${key}.md</a></h2>${flowStrip()}`;
-  if (kind === 'sheet') right += sec('In the app') || `<p>See <a href="sheet.html">#sheet</a>.</p>`;
+  let right = `<h2><b>${esc(title)}</b> in the app <a class="ai" href="../../content/${key}.md" title="docs/content/${key}.md: the guide, for people and programs">guide</a>${pr ? ` <a class="ai" href="../../examples/${key}.rs" title="docs/examples/${key}.rs: the code, compiled by everyware_ui_recipes_test">example</a>` : ''}</h2>${flowStrip()}`;
+  if (kind === 'sheet') {
+    const app = (sections['Quick start'] ? `<h3>Quick start</h3>${sec('Quick start')}` : '') + sec('In the app')
+      + (sections['From the app'] ? `<h3>From the app</h3>${sec('From the app')}` : '');
+    right += app || `<p>See <a href="sheet.html">#sheet</a>.</p>`;
+  }
   else {
+    if (sections['Quick start']) right += `<div class="quick"><h3>Quick start</h3>${secText('Quick start')}</div>`;
     right += `<div class="slotname">slot name <input id="slotname" value="#home/${name}" spellcheck="false"></div><div class="path" id="path">
 <div class="step" data-stage="0"><h4>harry reports a gesture</h4><div class="muted">The finger is on the node named <code class="slotref">${SLOT}</code>: harry hit-tests the drawn tree and hands the app <code>Gesture::Down</code>, moves, <code>Gesture::Up</code> with that name.</div></div>
 <div class="step" data-stage="1"><h4>actions.rs: ${pr && pr.act ? 'one match arm, the component decides' : 'nothing: display only'}</h4><div class="muted">${pr && pr.act ? 'harry\'s gesture is an action of the app like every other (the listener below sends it). The app\'s <code>apply</code> matches the node name: <b>you add this arm</b>. The component takes the gesture, updates itself (pressed, on or off, the finger\'s position) and answers with an event when the gesture completed something, <code>None</code> otherwise.' : 'This component shows data; it takes no gestures.'}</div>
-${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</code></pre>` : ''}${r.on ? `<div class="muted">the component's side: <code>${esc(r.on)}</code></div>` : ''}<div class="event" id="event"></div>
+${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</code></pre>` : ''}${pr && pr.send.length ? `<div class="muted">sending the event on: the app's own link to a service</div><pre><code class="language-rust">${esc(pr.send.join('\n'))}</code></pre>` : ''}${r.on ? `<div class="muted">the component's side: <code>${esc(r.on)}</code></div>` : ''}<div class="event" id="event"></div>
 <details class="fold"><summary>once per app: the listener that turns harry's input into an action (ui_event_listener.rs)</summary>
 <pre><code class="language-rust">impl UiEventListener for UiListener {
     fn handle_event(&amp;mut self, event: UserInputEvent) -> HandleEventStatus {
@@ -544,12 +587,13 @@ ${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</co
       right += `<h3>Live: <code>${esc(live.slot)}</code> in ${esc(live.app)}</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div>${block('state', 'state.rs')}${block('ui_model', 'ui_model.rs')}${block('presenter', 'presenter.rs')}${block('actions', 'actions.rs')}`;
     }
     right += sec('In the app');
+    if (sections['From the app']) right += `<h3>From the app</h3>${sec('From the app')}`;
   }
 
   let body = `<div class="split"><section class="world">${left}</section><section class="world">${right}</section></div>
 <script type="application/json" id="variants">${JSON.stringify(svgs).replace(/</g, '\\u003c')}</script>
 <script type="application/json" id="behaviour">${JSON.stringify(behaviour).replace(/</g, '\\u003c')}</script>`;
-  if (sections.intro) body += `<div class="card">${markdown(sections.intro)}</div>`;
+  if (sections.intro) body += `<div class="card">${whatWhy(markdown(sections.intro))}${sections['When to use it'] ? `<h3>When to use it</h3>${sec('When to use it')}` : ''}</div>`;
 
   // ---- details, folded
   const more = (t, inner) => inner ? `<details class="more"><summary>${t}</summary><div class="body">${inner}</div></details>` : '';
@@ -569,6 +613,8 @@ ${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</co
 <li>Fetch the design into the app and run <code>everyware_ui_test</code>: it fails when a variant or a part the code uses is missing in the design.</li>
 </ol>`);
   if (sections.Traps) body += more('Traps', markdown(sections.Traps));
+  if (sections['How it works']) body += more('How it works', sec('How it works'));
+  for (const [h] of Object.entries(sections).filter(([h]) => !PLACED.includes(h))) body += `<div class="card"><h3>${esc(h)}</h3>${sec(h)}</div>`;
   return page(`${title} · EveryWare UI`, navHtml(key, 1), body, 1);
 }
 
@@ -599,38 +645,26 @@ const D = {
   ar: (x1, y1, x2, y2, cls = '', label = '') => `<line class="ar ${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ah)"/>${label ? `<text class="sub" x="${(x1 + x2) / 2}" y="${Math.min(y1, y2) - 4}" text-anchor="middle">${label}</text>` : ''}`,
   no: (x, y) => `<text class="no" x="${x}" y="${y}" text-anchor="middle">✕</text>`,
 };
-const PRINCIPLES = [
-  ['One truth, one direction',
-   'Action → state → UI model → pixels. Nothing on the screen writes back: a tap is an action like a message from a bundle, so a frame is a function of the state, testable on the host.',
-   D.svg(340, 100, D.box(4, 30, 70, 34, 'action', '', 'tap, data') + D.ar(74, 47, 92, 47) + D.box(92, 30, 70, 34, 'State', 'acc') + D.ar(162, 47, 180, 47) + D.box(180, 30, 76, 34, 'UI model') + D.ar(256, 47, 274, 47) + D.box(274, 30, 62, 34, 'pixels') +
+// The principles: the text is docs/llms.txt's (written by hand, the entry for a program), the
+// diagrams are the site's, one per principle in the same order.
+const PRINCIPLE_TEXT = fs.readFileSync(path.join(__dirname, 'llms.txt'), 'utf8').split('## Principles\n')[1].split('\n\n')[0]
+  .split('\n').map(l => l.match(/^\d+\. ([^:]+): (.*)$/)).filter(Boolean).map(m => [m[1], m[2]]);
+const PRINCIPLE_DIAGRAMS = [
+  [D.svg(340, 100, D.box(4, 30, 70, 34, 'action', '', 'tap, data') + D.ar(74, 47, 92, 47) + D.box(92, 30, 70, 34, 'State', 'acc') + D.ar(162, 47, 180, 47) + D.box(180, 30, 76, 34, 'UI model') + D.ar(256, 47, 274, 47) + D.box(274, 30, 62, 34, 'pixels') +
      `<path class="ar no" d="M305 64 Q305 92 127 92 L127 68" fill="none" marker-end="url(#ah)"/>` + D.no(216, 96))],
-  ['Figma decides how it looks, code decides what happens',
-   'Geometry, colours, variants and names come from the .fig; which variant shows, what a tap does and the data come from Rust. Figma\'s Play prototype is for people looking at the design: harry never reads it.',
-   D.svg(340, 100, D.box(4, 6, 156, 62, 'Figma: how it looks', 'fig', 'geometry · colours|variants · #names') + D.box(180, 6, 156, 62, 'Rust: what happens', 'acc', 'which variant shows|what a tap does · the data') +
+  [D.svg(340, 100, D.box(4, 6, 156, 62, 'Figma: how it looks', 'fig', 'geometry · colours|variants · #names') + D.box(180, 6, 156, 62, 'Rust: what happens', 'acc', 'which variant shows|what a tap does · the data') +
      D.box(4, 76, 110, 20, 'Play prototype', 'fig') + D.ar(114, 86, 176, 86, 'no') + D.no(145, 82) + D.box(180, 76, 156, 20, 'harry', ''))],
-  ['Names are the contract',
-   'A #name on a Figma layer is a field in ui_model.rs. Rename both or neither: everyware_ui_test fails when they drift apart.',
-   D.svg(340, 100, D.box(4, 20, 148, 46, '#entryway/light', 'fig', 'a layer in Figma') + `<text x="170" y="46" text-anchor="middle" font-size="22">=</text>` + D.box(188, 20, 148, 46, 'light: Slot', 'acc', '"#entryway/light"|in ui_model.rs') +
+  [D.svg(340, 100, D.box(4, 20, 148, 46, '#entryway/light', 'fig', 'a layer in Figma') + `<text x="170" y="46" text-anchor="middle" font-size="22">=</text>` + D.box(188, 20, 148, 46, 'light: Slot', 'acc', '"#entryway/light"|in ui_model.rs') +
      `<text class="sub" x="170" y="86" text-anchor="middle">renamed on one side → everyware_ui_test fails</text>`)],
-  ['Components are state machines, owned by the library',
-   'Pressed, value, focus, variant and transition live in everyware_ui_core. The app routes a gesture by name and acts on the event, so a button behaves the same in every EveryWare app.',
-   D.svg(340, 100, D.box(4, 30, 96, 40, 'the app', '', 'match name, act') + D.ar(100, 40, 150, 40, '', 'gesture') + D.ar(150, 60, 100, 60) + `<text class="sub" x="122" y="76" text-anchor="middle">event</text>` +
+  [D.svg(340, 100, D.box(4, 30, 96, 40, 'the app', '', 'match name, act') + D.ar(100, 40, 150, 40, '', 'gesture') + D.ar(150, 60, 100, 60) + `<text class="sub" x="122" y="76" text-anchor="middle">event</text>` +
      D.box(150, 12, 186, 76, 'library: Toggle', 'acc', 'pressed · value · variant|transition'))],
-  ['A component on a screen is a slot',
-   'A named frame with a preview instance inside; harry clones the chosen variant into it. One component, many places, each with its own texts and values.',
-   D.svg(340, 100, D.box(2, 30, 72, 40, '#button', 'fig', 'the Library') + `<rect class="b" x="104" y="4" width="232" height="92" rx="9"/><text class="sub" x="220" y="16" text-anchor="middle">the screen</text>` +
+  [D.svg(340, 100, D.box(2, 30, 72, 40, '#button', 'fig', 'the Library') + `<rect class="b" x="104" y="4" width="232" height="92" rx="9"/><text class="sub" x="220" y="16" text-anchor="middle">the screen</text>` +
      D.box(114, 24, 64, 26, 'Connect', 'acc') + D.box(188, 24, 64, 26, 'Cancel', 'acc') + D.box(262, 24, 64, 26, 'Rescan', 'acc') + `<text class="sub" x="220" y="68" text-anchor="middle">#wifi/connect · #wifi/cancel · #wifi/rescan</text><text class="sub" x="220" y="84" text-anchor="middle">three clones, each with its own text</text>` +
      D.ar(74, 42, 112, 38, '', 'clone'))],
-  ['Variants for rare changes, parts for smooth ones',
-   'A variant change rebuilds the node (~50 ms on the RB3): kind, disabled, selected. Pressed, fades, thumbs and carets are opacities and meters, display-only, every frame.',
-   D.svg(340, 100, `<text class="sub" x="84" y="14" text-anchor="middle">variant: a jump, the node rebuilt</text><polyline class="ar" points="14,72 80,72 80,32 150,32" fill="none"/><text class="sub" x="84" y="92" text-anchor="middle">~50 ms</text>` +
+  [D.svg(340, 100, `<text class="sub" x="84" y="14" text-anchor="middle">variant: a jump, the node rebuilt</text><polyline class="ar" points="14,72 80,72 80,32 150,32" fill="none"/><text class="sub" x="84" y="92" text-anchor="middle">~50 ms</text>` +
      `<text class="sub" x="256" y="14" text-anchor="middle">part: a curve, drawn every frame</text><path class="ar acc" d="M186 72 C 230 72 240 32 322 32" fill="none"/><text class="sub" x="256" y="92" text-anchor="middle">opacity, meter, position</text>`)],
-  ['One spec, two readers',
-   'components.json names the sets, their variants and transitions. The Figma generator and the Rust library read the same file, so they cannot disagree.',
-   D.svg(340, 100, D.box(110, 6, 120, 34, 'components.json', 'acc') + D.ar(150, 40, 70, 62) + D.ar(190, 40, 270, 62) + D.box(4, 62, 130, 34, 'Figma generator', 'fig', 'component sets') + D.box(206, 62, 130, 34, 'Rust library', '', 'variant(), transition()'))],
-  ['Roles, not contexts',
-   'A component is named by its role (button, list item, tile: Material 3), never by what the app puts in it. A new need extends a property or a part before a new component is made.',
-   D.svg(340, 100, `<text class="ok" x="84" y="20" text-anchor="middle">✓ by role</text>` + D.box(14, 32, 140, 24, '#button', 'acc') + D.box(14, 66, 140, 24, '#list-item · #tile', 'acc') +
+  [D.svg(340, 100, D.box(110, 6, 120, 34, 'components.json', 'acc') + D.ar(150, 40, 70, 62) + D.ar(190, 40, 270, 62) + D.box(4, 62, 130, 34, 'Figma generator', 'fig', 'component sets') + D.box(206, 62, 130, 34, 'Rust library', '', 'variant(), transition()'))],
+  [D.svg(340, 100, `<text class="ok" x="84" y="20" text-anchor="middle">✓ by role</text>` + D.box(14, 32, 140, 24, '#button', 'acc') + D.box(14, 66, 140, 24, '#list-item · #tile', 'acc') +
      `<text class="no" x="256" y="20" text-anchor="middle">✕ by use</text>` + D.box(186, 32, 140, 24, '#fan-selector', 'bad') + D.box(186, 66, 140, 24, '#room-tile · #wifi-row', 'bad'))],
 ];
 // How a program works with the library: the entry files, in the order it reads them.
@@ -643,10 +677,24 @@ const aiFirstBlock = () => `<section class="concept aifirst"><h2>For a program</
 <div class="ai-step"><div class="k">5</div><div><b>the check</b><code>everyware_ui_test</code> <code>scripts/check.sh</code><p>the code against the design, the tests and their coverage, the generated files against the sources; a failure says what to change</p></div></div>
 </div>
 <p class="role">The spec (<code>components.json</code>) is read by the Figma generator and the Rust library alike; the docs are generated from the spec, the sources, the binding and the live app. Nothing is written twice, so nothing can disagree.</p></section>`;
+if (PRINCIPLE_TEXT.length !== PRINCIPLE_DIAGRAMS.length) throw new Error(`docs/llms.txt has ${PRINCIPLE_TEXT.length} principles, the site ${PRINCIPLE_DIAGRAMS.length} diagrams`);
+const PRINCIPLES = PRINCIPLE_TEXT.map(([t, x], i) => [t, x, PRINCIPLE_DIAGRAMS[i][0]]);
 const principlesBlock = () => `<section class="concept"><h2>Principles</h2><div class="principles">${PRINCIPLES.map(([t, x, d], i) => `<div class="principle">${d}<h4><span class="n">${i + 1}</span>${t}</h4><p>${x}</p></div>`).join('')}</div></section>`;
 const conceptBlock = () => `<section class="concept" id="concept"><h2>One tap, six stages</h2><p class="role">The architecture of every harry app: the strip on the right of each component page is this pipeline. A tap runs through it by itself.</p>
 <div class="pipe">${[['figma', 'Design', 'the Figma file', [0]], ['app', 'The app', 'four Rust files', [1, 2, 3, 4]], ['harry', 'harry', 'the framework', [5]]].map(([own, who, what, idx], g) => `<div class="lane ${own}"><div class="lane-label"><b>${who}</b>${what}</div><div class="lane-rows">${idx.map((i, k) => { const [, title, file, code, text] = STAGES[i]; return `<div class="row" data-stage="${i}"><div class="node"><div><span class="t">${title}</span><span class="f">${file}</span></div><code>${code}</code></div><div class="why">${text}</div></div>${k < idx.length - 1 ? '<i>↓</i>' : ''}`; }).join('')}</div></div>${g < 2 ? '<i class="between">↓</i>' : ''}`).join('')}</div>
 <p class="role">The Figma file holds the first and the last stage: the names, the variants, the pictures. The app holds the four files between: one match arm, one field, one slot line per component on the screen, whoever writes them, a person or an AI.</p></section>`;
+
+// Getting started (docs/content/getting-started.md): one card per step, its What and its Why
+// set apart, the code from the button's example (docs/sync-examples.js keeps it equal)
+function gettingStartedPage() {
+  const c = readContent('getting-started');
+  if (!c) return null;
+  const html = whatWhy(markdown(c.body));
+  // a card per step: everything from one step's heading to the next (markdown() renders ## as h3)
+  const parts = html.split(/(?=<h3 )/);
+  const body = parts.map((p, i) => i === 0 ? `<div class="card">${p}</div>` : `<section class="card step-card">${p}</section>`).join('');
+  return page('Getting started · EveryWare UI', navHtml('getting-started', 0), `<h1>${esc(c.meta.title || 'Getting started')}</h1><p class="role">${inline(c.meta.role || '')}</p>${body}`, 0);
+}
 
 function indexPage() {
   const intro = fs.existsSync(path.join(CONTENT, 'index.md')) ? markdown(readContent('index').body) : '';
@@ -658,7 +706,7 @@ function indexPage() {
   const rest = Object.keys(SPEC.components).filter(k => !placed.has(k));
   if (rest.length) groups += `<h2>More</h2><div class="cards">${rest.map(card).join('')}</div>`;
   const sample = variantSvgs(SPEC.components.button)['kind=primary, state=default, size=regular'] || '';
-  return page('EveryWare UI', navHtml('index', 0), `<section class="intro"><div><h1>The UI of the next embedded device</h1><p class="role">Designed in Figma. Driven by Rust. On Android's core, without its weight. The same button on a home panel, a kitchen appliance, a robot. And an agent builds the next screen alone.</p></div><div class="canvas">${sample}</div></section>${aiFirstBlock()}${principlesBlock()}${conceptBlock()}<details class="fold card"><summary>In depth: what lives where (Figma, the code, the spec), compared with DesignCompose</summary>${intro}</details>${groups}`, 0);
+  return page('EveryWare UI', navHtml('index', 0), `<section class="intro"><div><h1>The UI of the next embedded device</h1><p class="role">Designed in Figma. Driven by Rust. On Android's core, without its weight. The same button on a home panel, a kitchen appliance, a robot. And an agent builds the next screen alone.</p></div><div class="canvas">${sample}</div></section><p class="cta"><a href="getting-started.html">Getting started: a button on the screen of your own app, step by step →</a></p>${aiFirstBlock()}${principlesBlock()}${conceptBlock()}<details class="fold card"><summary>In depth: what lives where (Figma, the code, the spec), compared with DesignCompose</summary>${intro}</details>${groups}`, 0);
 }
 
 // ---------------------------------------------------------------- llms
@@ -752,7 +800,8 @@ function componentMd(key, c, parts) {
         '// state.rs: in struct State, and its first value in State::new', ...rc.state, ...rc.init.map(l => '// ' + l), ...(rc.state.length ? [''] : []),
         '// ui_model.rs: in everyware_ui::ui_model! { ... } (the contract with the design)', ...rc.model, '',
         '// presenter.rs: after every action', ...rc.present, '',
-        ...(rc.act ? ['// actions.rs: in the match on the gesture\'s node name', ...rc.act] : ['// actions.rs: nothing, display only']), '```');
+        ...(rc.act ? ['// actions.rs: in the match on the gesture\'s node name', ...rc.act] : ['// actions.rs: nothing, display only']),
+        ...(rc.send.length ? ['', '// sending the event on: the app\'s own link to a service', ...rc.send] : []), '```');
       if (rc.note) L.push('', rc.note);
     } else L.push('', '## The app', '', `No Rust binding yet: the app cannot put \`${c.set}\` in a slot (no \`impl Slotted\` in harry/src/slot.rs).`);
   }
@@ -768,118 +817,10 @@ function componentMd(key, c, parts) {
   return L.join('\n') + '\n';
 }
 
-// Every recipe of docs/recipes.js in one small app, compiled and run by the host test
-// everyware_ui_recipes_test: the lines the docs show are the lines that build.
-function recipesRs() {
-  const keys = Object.keys(RECIPES);
-  const rs = keys.map(k => [k, recipe(k, `#doc/${k}`, k, 'list_item')]);
-  // the imports merged by module (two recipes may name the same type); design and model come
-  // with the header
-  const byMod = new Map();
-  // names at the crate's top (part_of, ScreenView) join the header's own line
-  const top = new Set(['list', 'row_of', 'scrollbar', 'slot', 'Gesture']);
-  for (const u of rs.flatMap(([, r]) => r.use)) {
-    const t = u.match(/^use everyware_ui::(\w+);$/);
-    if (t) { top.add(t[1]); continue; }
-    const m = u.match(/^use everyware_ui::(\w+)::(?:\{(.*)\}|(\w+));$/);
-    if (!m || m[1] === 'design') continue;
-    const set = byMod.get(m[1]) || new Set();
-    for (const n of (m[2] || m[3]).split(',').map(x => x.trim()).filter(Boolean)) set.add(n);
-    byMod.set(m[1], set);
-  }
-  const uses = [...byMod].sort().map(([m, names]) => `use everyware_ui::${m}::{${[...names].sort().join(', ')}};`);
-  const ind = (l, n) => l.map(x => ' '.repeat(n) + x);
-  const gestures = rs.filter(([, r]) => r.act).map(([k]) => k === 'segmented' ? '#segmented/segment-2' : k === 'tabs' ? '#doc/tabs/#tabs/tab-2' : k === 'dropdown' ? '#dropdown/item/1' : k === 'keyboard' ? '#kbd/r1/1' : k === 'radio' ? `#doc/${k}/2` : k === 'list_item' ? `#doc/${k}/0` : `#doc/${k}`);
-  return [
-    '// Generated by docs/build-docs.js from docs/recipes.js: every component\'s recipe, the lines the',
-    '// docs show, in one app. Do not edit; everyware_ui_recipes_test compiles and runs it.',
-    '#![allow(dead_code, unused_imports, unused_variables)]',
-    '',
-    'use everyware_ui::design::{Frame, Sizes};',
-    'use everyware_ui::model::prelude::*;',
-    `use everyware_ui::{${[...top].sort().join(', ')}};`,
-    'use std::time::Instant;',
-    ...uses,
-    '',
-    'pub struct State {',
-    ...ind(rs.flatMap(([, r]) => r.state), 4),
-    '}',
-    '',
-    'impl State {',
-    '    pub fn new(sizes: &Sizes) -> Self {',
-    '        let frame = sizes.frame("#doc/slider").unwrap_or(Frame { x: 0.0, y: 0.0, width: 243.0, height: 56.0 });',
-    '        State {',
-    ...ind(rs.flatMap(([, r]) => r.init), 12),
-    '        }',
-    '    }',
-    '}',
-    '',
-    'everyware_ui::ui_model! {',
-    ...ind(rs.flatMap(([, r]) => r.model), 4),
-    '}',
-    '',
-    'pub fn present(model: &mut UiModel, state: &State) {',
-    ...ind(rs.flatMap(([, r]) => r.present), 4),
-    '}',
-    '',
-    'pub fn on_gesture(state: &mut State, node: &str, gesture: Gesture) {',
-    '    match node {',
-    ...ind(rs.flatMap(([, r]) => r.act || []), 8),
-    '        _ => {}',
-    '    }',
-    '}',
-    '',
-    '#[test]',
-    'fn every_recipe_builds_a_model_and_takes_a_tap() {',
-    '    let mut state = State::new(&Sizes::none());',
-    '    let mut model = UiModel::new(HashMap::new());',
-    '    present(&mut model, &state);',
-    `    for node in [${gestures.map(g => JSON.stringify(g)).join(', ')}] {`,
-    '        on_gesture(&mut state, node, Gesture::DOWN);',
-    '        on_gesture(&mut state, node, Gesture::UP);',
-    '    }',
-    '    present(&mut model, &state);',
-    '    // a tap on the toggle switched it, a tap on the second segment chose it',
-    '    assert!(state.toggle.value);',
-    '    assert_eq!(state.segmented.value(), "Med");',
-    '}',
-    '',
-  ].join('\n');
-}
-
 function llmsFull(parts) {
   const lines = ['# EveryWare UI: every component, for a program that writes harry apps', '', 'One section per component, the same text as docs/ai/<component>.md: Figma set and variants, the parts the code sets, transitions, the Rust API, the four lines the app writes, the guide. The principles and rules: docs/llms.txt.', ''];
   for (const [key, c] of Object.entries(SPEC.components)) lines.push(componentMd(key, c, parts).replace(/^# /, '## ').replace(/\n## /g, '\n### '), '');
   return lines.join('\n');
-}
-
-function llmsIndex() {
-  const rules = fs.existsSync(path.join(CONTENT, 'rules.md')) ? fs.readFileSync(path.join(CONTENT, 'rules.md'), 'utf8').trim() : '';
-  const list = Object.entries(SPEC.components).map(([key, c]) => { const content = readContent(key); return `- ${c.set}: ${content && content.meta.role ? content.meta.role : (c.value || '').split(/[.;]/)[0]} (docs/ai/${key}.md)`; }).join('\n');
-  return `# EveryWare UI
-
-The UI component library of SDV EveryWare: Figma component sets (one per role, Material 3 names), Rust state machines (everyware_ui_core), the binding to the harry UI framework (everyware_ui), used by harry apps on embedded devices (no Android framework).
-
-## Principles
-${PRINCIPLES.map(([t, x], i) => `${i + 1}. ${t}: ${x}`).join('\n')}
-
-## One tap, six stages (the architecture of a harry app; every component page follows it)
-${STAGES.map(([own, title, file, code, text], i) => `${i + 1}. ${title} (${file}, ${own === 'app' ? 'the app' : own}): ${text.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&')} Code: ${code.replace(/&amp;/g, '&')}`).join('\n')}
-
-## Read next
-- docs/ai/<component>.md: one component (1-3 KB): Figma set and variants, parts, transitions, Rust API, the four lines the app writes, guide, check; docs/llms-full.txt is all of them in one file
-- docs/site/: the same content rendered for people (pictures, the tap simulation)
-- components.json: the machine-readable spec (sets, properties, transitions); the Rust library and the Figma generator read it
-- skills/new-app/SKILL.md: a new board as an app of its own from one sentence (scripts/new-app.sh, the design patch, fig-to-dcf.sh, the RB3)
-- skills/ui-component/SKILL.md and traps.md: how to add or change a component (spec, Figma generator, Rust, binding, app)
-- ../everyware/skills/figma-design/SKILL.md: screens, sheets and the designer's prototype
-- skills/harry-app/SKILL.md, reference.md and traps.md: a harry app end to end (state, actions, presenter, UI model, build, run, debug)
-
-${rules}
-
-## Components
-${list}
-`;
 }
 
 // ---------------------------------------------------------------- main
@@ -894,16 +835,15 @@ for (const [key, c] of Object.entries(SPEC.components)) {
   written++;
 }
 fs.writeFileSync(path.join(SITE, 'index.html'), indexPage());
-fs.mkdirSync(path.join(__dirname, 'recipes'), { recursive: true });
-fs.writeFileSync(path.join(__dirname, 'recipes', 'recipes.rs'), recipesRs());
+const gs = gettingStartedPage();
+if (gs) fs.writeFileSync(path.join(SITE, 'getting-started.html'), gs);
 const AI = path.join(__dirname, 'ai');
 fs.mkdirSync(AI, { recursive: true });
 for (const f of fs.readdirSync(AI)) if (f.endsWith('.md') && !SPEC.components[f.replace(/\.md$/, '')]) fs.unlinkSync(path.join(AI, f));
 for (const [key, c] of Object.entries(SPEC.components)) fs.writeFileSync(path.join(AI, `${key}.md`), componentMd(key, c, parts));
 fs.writeFileSync(path.join(__dirname, 'llms-full.txt'), llmsFull(parts));
-fs.writeFileSync(path.join(__dirname, 'llms.txt'), llmsIndex());
 // the AI files next to the site too, so one folder can be served
 fs.copyFileSync(path.join(__dirname, 'llms-full.txt'), path.join(SITE, 'llms-full.txt'));
 fs.copyFileSync(path.join(__dirname, 'llms.txt'), path.join(SITE, 'llms.txt'));
 const withContent = fs.readdirSync(CONTENT).filter(f => f.endsWith('.md') && !['index.md', 'rules.md'].includes(f)).length;
-console.log(`docs: ${written} component pages (${withContent} with written content), index, ${written} docs/ai/*.md, llms.txt, llms-full.txt -> ${path.relative(ROOT, SITE)}`);
+console.log(`docs: ${written} component pages (${withContent} with written content), index, ${written} docs/ai/*.md, llms-full.txt -> ${path.relative(ROOT, SITE)} (none of it in git)`);
