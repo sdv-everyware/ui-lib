@@ -52,6 +52,8 @@ pub enum ComponentKind {
     Skeleton,
     /// #tile: a device's card
     Tile,
+    /// #tabs: the screen's navigation, one tab per screen
+    Tabs,
 }
 
 /// A change of state that may be animated.
@@ -80,6 +82,8 @@ pub enum Change {
     Disable,
     /// one pass of a repeated sweep (a skeleton's shimmer), from the start again after it
     Sweep,
+    /// one screen -> another (a tap on a tab): the screens' effect splits it (screens.rs)
+    Switch,
 }
 
 /// The easing curves of components.json.
@@ -106,6 +110,17 @@ pub struct Transition {
     pub duration: Duration,
     /// Curve of the animation.
     pub easing: Easing,
+    /// How long the value waits before it moves (a screen that fades in after the old one
+    /// faded out); zero for every transition of components.json.
+    pub delay: Duration,
+}
+
+impl Transition {
+    /// The same curve over a part of this transition: `start` and `length` are fractions of
+    /// its duration (an effect that runs two moves one after the other, screens.rs).
+    pub fn part(self, start: f32, length: f32, easing: Easing) -> Transition {
+        Transition { duration: self.duration.mul_f32(length), easing, delay: self.delay + self.duration.mul_f32(start) }
+    }
 }
 
 #[derive(Deserialize)]
@@ -134,7 +149,7 @@ pub fn transition(component: ComponentKind, change: Change) -> Option<Transition
         return None;
     }
     spec().iter().find(|e| e.change == change && e.components.contains(&component)).map(|e| {
-        Transition { duration: Duration::from_millis(e.ms), easing: e.easing }
+        Transition { duration: Duration::from_millis(e.ms), easing: e.easing, delay: Duration::ZERO }
     })
 }
 
@@ -150,5 +165,14 @@ mod tests {
         assert_eq!((t.duration.as_millis(), t.easing), (80, Easing::EaseOut));
         assert_eq!(transition(ComponentKind::Button, Change::Open), None);
         assert_eq!(transition(ComponentKind::Toggle, Change::Disable), None);
+        let t = transition(ComponentKind::Tabs, Change::Switch).unwrap();
+        assert_eq!((t.duration.as_millis(), t.easing, t.delay), (300, Easing::EaseOut, Duration::ZERO));
+    }
+
+    #[test]
+    fn a_part_of_a_transition_starts_later() {
+        let t = Transition { duration: Duration::from_millis(300), easing: Easing::EaseOut, delay: Duration::ZERO };
+        let p = t.part(0.3, 0.7, Easing::EaseIn);
+        assert_eq!((p.duration.as_millis(), p.delay.as_millis(), p.easing), (210, 90, Easing::EaseIn));
     }
 }

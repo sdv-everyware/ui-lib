@@ -53,7 +53,7 @@ The UI component library of SDV EveryWare: Figma component sets (one per role, M
 - #scrollbar: The thumb of a scrolling list: a vertical progress marker along a track, faded in while the list moves. (docs/ai/scrollbar.md)
 - #icon: A 24 px glyph (Lucide) for the slots of other components; display only, no state. (docs/ai/icon.md)
 - #segmented: One choice of two to four, Material 3's segmented button: the segments are tap targets, the selected one is lit by opacity. (docs/ai/segmented.md)
-- #tabs: The screen's navigation, Material 3's tabs: the active tab is lit by opacity, a tap switches the screen. (docs/ai/tabs.md)
+- #tabs: The screen's navigation, Material 3's tabs: the chosen tab is lit by opacity, a tap switches the screen with the screens' effect. (docs/ai/tabs.md)
 - #tile: A device's card, Material 3's card for a smart home device: a symbol, a title, a subtitle, a value and the device's control; a tap on the card opens the device, the control inside changes it. (docs/ai/tile.md)
 - #skeleton: a placeholder while content loads (Material's skeleton loader): grey shapes where the content will be, a heading bar, four text lines or a 16:9 picture, 440 or 832 wide (wide: a side panel's 880 content less 24 on each side) (docs/ai/skeleton.md)
 - #symbol: The tile of a room's or a device's symbol: 48 px, the soft accent background, one glyph in ink; display only. (docs/ai/symbol.md)

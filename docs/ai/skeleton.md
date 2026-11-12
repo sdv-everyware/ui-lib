@@ -56,10 +56,10 @@ Display only; `state.panel_skeleton_1.start(Instant::now())` while the content l
 ## Live: `#panel/skeleton-1` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// ui_model.rs:257
+// ui_model.rs:267
 panel_skeleton_1: Slot = "#panel/skeleton-1" ["SlotCustomizer"];
 
-// presenter.rs:106
+// presenter.rs:116
 model.panel_skeleton_1 = slot("#panel/skeleton-1", &browser.skeletons[0]);
 ```
 

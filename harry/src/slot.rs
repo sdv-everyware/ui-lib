@@ -43,6 +43,7 @@ use everyware_ui_core::list_view::Row;
 use everyware_ui_core::list_view::{ListView, Scroll};
 use everyware_ui_core::radio::Radio;
 use everyware_ui_core::segmented::Segmented;
+use everyware_ui_core::tabs::Tabs;
 use everyware_ui_core::slider::Slider;
 use everyware_ui_core::skeleton::Skeleton;
 use everyware_ui_core::symbol::SymbolIcon;
@@ -710,6 +711,30 @@ impl Slotted for Segmented {
     }
 }
 
+/// Per tab its labels and its light: the chosen one's pill and accent label at 100, the ink2
+/// label at the rest. The tabs take taps by their names (`#tabs/tab-<i>`); `Input` reports
+/// them with the slot (`#home/tabs/#tabs/tab-2`), so two tab bars on one screen stay apart.
+/// Tabs 3 and 4 are not in every variant (tabs=2 has two).
+impl Slotted for Tabs {
+    const SET: &'static str = "#tabs";
+    fn parts(&self, item: ComponentItem) -> ComponentItem {
+        let move_to = self.value_transition();
+        self.labels.iter().enumerate().fold(item, |item, (i, label)| {
+            let n = format!("#tabs/tab-{}", i + 1);
+            let on = self.target(i);
+            let names = [n.clone(), format!("{n}/selected"), format!("{n}/label"), format!("{n}/label-selected")];
+            let item = item
+                .text(format!("{n}/label"), label.clone())
+                .text(format!("{n}/label-selected"), label.clone())
+                .opacity(format!("{n}/selected"), Meter::new(on, move_to))
+                .opacity(format!("{n}/label-selected"), Meter::new(on, move_to))
+                .opacity(format!("{n}/label"), Meter::new(100.0 - on, move_to))
+                .interactive(n, self.press.enabled);
+            if i >= 2 { names.into_iter().fold(item, |item, name| item.optional(name)) } else { item }
+        })
+    }
+}
+
 /// The card's texts, its symbol (one glyph of the stack lit), pressed, the picture, and the
 /// control inside it as its own binding sets it (the same part names). The control takes taps
 /// of its own: its node is interactive in the clone, harry reports it first and the card (the
@@ -957,6 +982,8 @@ mod tests {
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
             slot("#s", &Segmented::new(["Low", "Med", "High"])),
             slot("#s", &Segmented::new(["Off", "On"])),
+            slot("#s", &Tabs::new(["Overview", "Rooms", "Automations"])),
+            slot("#s", &Tabs::new(["Living room", "Entryway", "Bedroom", "Office"])),
             slot("#s", &Symbol::new(SymbolIcon::DoorOpen)),
             slot("#s", &Skeleton::new(SkeletonKind::Media, SkeletonSize::Wide)),
             slot("#s", &Slider::new(50.0, 0.0, 300.0)),

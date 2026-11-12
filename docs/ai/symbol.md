@@ -48,10 +48,10 @@ model.device_symbol = slot("#device/symbol", &state.device_symbol);
 ## Live: `#device/symbol` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// ui_model.rs:232
+// ui_model.rs:242
 device_symbol: Slot = "#device/symbol" ["SlotCustomizer"];
 
-// presenter.rs:77
+// presenter.rs:87
 model.device_symbol = slot("#device/symbol", &Symbol::new(device.view.symbol));
 ```
 

@@ -59,15 +59,15 @@ Display only: it follows the `ListView` of its list (`list`) and fades out when 
 ## Live: `#wifi/scrollbar` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:141
+// state.rs:150
 /// The list #wifi/networks: one row (ui-lib list item) per network, scrolling.
 pub list: ListView,
 list: ListView::new([], LIST_H, ROW_PITCH),
 
-// ui_model.rs:220
+// ui_model.rs:230
 wifi_scrollbar: Slot = "#wifi/scrollbar" ["SlotCustomizer"];
 
-// presenter.rs:62
+// presenter.rs:72
 model.wifi_scrollbar = scrollbar("#wifi/scrollbar", &wifi.list);
 ```
 

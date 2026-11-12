@@ -80,7 +80,7 @@ model.status_wifi = slot("#status/wifi", &state.status_wifi);
 ## Live: `#status/wifi` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// state.rs:28
+// state.rs:30
 pub wifi: WifiSheet,
 wifi: IconButton::new(IconButtonKind::Glass, Icon::Wifi).compact(),
 

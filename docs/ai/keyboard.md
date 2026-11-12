@@ -83,10 +83,10 @@ Usually inside the keyboard dock with a form (`Form`), which routes the keys to 
 ## Live: `#osk/keys` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// ui_model.rs:267
+// ui_model.rs:277
 osk_keys: Slot = "#osk/keys" ["SlotCustomizer"];
 
-// presenter.rs:113
+// presenter.rs:123
 model.osk_keys = slot("#osk/keys", &state.osk.keyboard);
 ```
 

@@ -42,8 +42,8 @@ slider: Slider::in_slot(65.0, frame.x, frame.width),</code></pre><div class="mut
 <div class="step" data-stage="4"><h4>ui_model.rs: what to show, by node name</h4><div class="muted">One field per node in <code>everyware_ui::ui_model! { ... }</code>; the <code>SlotCustomizer</code> turns it into harry's customizations.</div>
 <pre><code class="language-rust">slider: Slot = "SLOT" ["SlotCustomizer"];</code></pre></div>
 <div class="step" data-stage="5"><h4>harry draws</h4><div class="muted">The clone of the chosen variant in the slot, with the parts set: the picture on the left is what the device shows.</div></div>
-</div><h3>Live: <code>#bedroom/dimmer</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:87</div><pre><code class="language-rust">pub dimmer: Slider,
-dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:172</div><pre><code class="language-rust">bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:38</div><pre><code class="language-rust">model.bedroom_dimmer = slot("#bedroom/dimmer", &amp;d.dimmer);</code></pre></div><div class="live"><div class="live-h">actions.rs:333</div><pre><code class="language-rust">"#bedroom/dimmer" =&gt; {
+</div><h3>Live: <code>#bedroom/dimmer</code> in smarthome-app</h3><div class="muted">The lines that drive this slot today, cut from the app's sources when these pages were built.</div><div class="live"><div class="live-h">state.rs:96</div><pre><code class="language-rust">pub dimmer: Slider,
+dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),</code></pre></div><div class="live"><div class="live-h">ui_model.rs:172</div><pre><code class="language-rust">bedroom_dimmer: Slot = "#bedroom/dimmer" ["SlotCustomizer"];</code></pre></div><div class="live"><div class="live-h">presenter.rs:38</div><pre><code class="language-rust">model.bedroom_dimmer = slot("#bedroom/dimmer", &amp;d.dimmer);</code></pre></div><div class="live"><div class="live-h">actions.rs:345</div><pre><code class="language-rust">"#bedroom/dimmer" =&gt; {
     // the value follows the finger (SliderEvent::Moving) and is in the slider; the
     // device gets it when the finger is up
     if let Some(SliderEvent::Changed(percent)) = d.dimmer.on(gesture) {
@@ -55,7 +55,7 @@ dimmer: Slider::new(65.0, 763.0 + 20.0, 203.0),</code></pre></div><div class="li
 <tr><th>Figma</th><td><a class="figma" data-node="2-2402" href="#">#slider on the Components page</a> <span class="muted">(set the file key in the menu)</span></td></tr>
 <tr><th>Spec</th><td><code>vendor/sdv-everyware/ui-lib/components.json:18</code> <span class="muted">properties, values, transitions</span></td></tr>
 <tr><th>Rust</th><td><code>vendor/sdv-everyware/ui-lib/core/src/slider.rs:14</code> <span class="muted"><code>Slider</code>, the state machine</span></td></tr>
-<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:661</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
+<tr><th>harry binding</th><td><code>vendor/sdv-everyware/ui-lib/harry/src/slot.rs:662</code> <span class="muted">the parts of the clone the code sets</span></td></tr>
 </tbody></table><ol class="steps">
 <li>A property, a value or a transition: <code>components.json</code>; the order of <code>props</code> is the order of the variant name.</li>
 <li>The drawing: the component set <code>#slider</code> in the Figma library, every variant; the layers the code sets keep their names <code>#slider/&lt;part&gt;</code>, nothing hidden.</li>

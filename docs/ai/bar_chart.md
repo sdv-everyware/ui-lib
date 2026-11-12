@@ -45,10 +45,10 @@ Display only; `BarChart::new(bars)` takes up to 24 (level 0..100, accent) pairs.
 ## Live: `#weather/chart` in smarthome-app (cut from the sources at build time)
 
 ```rust
-// ui_model.rs:195
+// ui_model.rs:205
 weather_chart: Slot = "#weather/chart" ["SlotCustomizer"];
 
-// presenter.rs:138
+// presenter.rs:148
 model.weather_chart = slot("#weather/chart", &chart);
 ```
 
