@@ -150,54 +150,6 @@ module.exports = function (msg) {
       written++;
     }
   }
-  // ---- where each set is used: the slots on the screens (an instance of a variant inside a
-  // frame named for the app), drawn with their surroundings and the slot highlighted
-  const parentOf = n => n.parentIndex && byKey.get(key(n.parentIndex.guid));
-  const variantSet = new Map();
-  for (const set of nodes.filter(n => n.isStateGroup && SETS.has(n.name))) for (const v of kids(set)) variantSet.set(key(v.guid), set.name);
-  const nameOf = n => { const o = (n.symbolData && n.symbolData.symbolOverrides || []).find(x => x.name && x.guidPath && x.guidPath.guids.length === 1 && key(x.guidPath.guids[0]) === key(n.symbolData.symbolID)); return (o && o.name) || n.name; };
-  for (const inst of nodes.filter(n => n.type === 'INSTANCE' && n.symbolData && variantSet.has(key(n.symbolData.symbolID)))) {
-    const set = variantSet.get(key(inst.symbolData.symbolID));
-    const slot = parentOf(inst);
-    if (!slot || !/^#/.test(slot.name) || /^#ui-gallery/.test(slot.name)) continue;
-    // only the app's slots (a glyph slot inside another library component is that component's)
-    if ([...SETS].some(other => slot.name.startsWith(other + '/'))) continue;
-    // one example per slot name (the designer's screen frames repeat the dashboard)
-    const entry0 = ids[set]; entry0.usage = entry0.usage || [];
-    if (entry0.usage.some(u => u.slot === slot.name) || entry0.usage.length >= 4) continue;
-    // the surroundings: up to a card, a widget or a variant of a content component
-    let ctx = parentOf(slot), guard = 0;
-    while (ctx && guard++ < 6) {
-      const p = parentOf(ctx);
-      const stop = ctx.type === 'SYMBOL' || /^#smarthome-root$/.test(ctx.name) || !p || p.type === 'CANVAS' || (ctx.size && ctx.size.x >= 600 && ctx.size.y >= 200) ;
-      if (stop) break;
-      ctx = p;
-    }
-    if (!ctx || !ctx.size) continue;
-    if (ctx.size.x > 1920 || ctx.size.y > 1200) continue;
-    // a hidden variant of a screen set is the designer's off state: not an example
-    if (/hidden/.test(ctx.name)) continue;
-    // what the surroundings are called: a content component's variant, else the frame's name
-    let label = ctx.name;
-    for (let n = ctx; n; n = parentOf(n)) { if (n.type === 'SYMBOL') { const p = parentOf(n); label = p && p.isStateGroup ? `${p.name} (${n.name})` : n.name; break; } if (n.name === '#smarthome-root' || (parentOf(n) && parentOf(n).type === 'CANVAS')) break; }
-    // the slot's place inside ctx
-    let x = 0, y = 0; for (let n = slot; n && n !== ctx; n = parentOf(n)) { x += (n.transform && n.transform.m02) || 0; y += (n.transform && n.transform.m12) || 0; }
-    defs = [];  // uid keeps counting: the SVGs are inlined into one page, their def ids must not repeat
-    const w = num(ctx.size.x), h = num(ctx.size.y);
-    const body = ctx.type === 'SYMBOL' || ctx.type === 'FRAME' || ctx.type === 'GROUP' ? kids(ctx).map(c => render(c, new Map(), 1)).join('') : render(ctx, new Map(), 1);
-    const bg = solid(ctx.fillPaints) ? `<rect width="${w}" height="${h}" rx="${num(ctx.cornerRadius || 0)}" ${fillAttr(ctx)}/>` : `<rect width="${w}" height="${h}" fill="#eef2f7"/>`;
-    const sw = num(slot.size.x), sh = num(slot.size.y);
-    const mark = `<g id="highlight"><rect x="${num(x) - 6}" y="${num(y) - 6}" width="${sw + 12}" height="${sh + 12}" rx="10" fill="none" stroke="#e5484d" stroke-width="3" stroke-dasharray="8 6"/><rect x="${num(x) - 6}" y="${num(y) - 34}" width="${Math.max(80, slot.name.length * 8.2 + 16)}" height="24" rx="6" fill="#e5484d"/><text x="${num(x) + 2}" y="${num(y) - 17}" font-family="ui-monospace, monospace" font-size="13" fill="#fff">${esc(slot.name)}</text></g>`;
-    // the view: the slot with its surroundings, at most about 720 x 420 of the context
-    const vw = Math.min(w, Math.max(sw + 360, 720)), vh = Math.min(h, Math.max(sh + 200, 360));
-    const vx = Math.max(0, Math.min(w - vw, num(x) + sw / 2 - vw / 2)), vy = Math.max(0, Math.min(h - vh, num(y) + sh / 2 - vh / 2));
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${vw}" height="${vh}" viewBox="${num(vx)} ${num(vy)} ${num(vw)} ${num(vh)}">${defs.length ? `<defs>${defs.join('')}</defs>` : ''}${bg}${body}${mark}</svg>\n`;
-    const entry = ids[set];
-    entry.usage = entry.usage || [];
-    const file = `usage-${entry.usage.length + 1}.svg`;
-    fs.writeFileSync(path.join(ASSETS, set.replace(/^#/, ''), file), svg);
-    entry.usage.push({ slot: slot.name, id: `${slot.guid.sessionID}-${slot.guid.localID}`, in: label, variant: byKey.get(key(inst.symbolData.symbolID)).name, file });
-  }
   fs.writeFileSync(path.join(ASSETS, 'nodes.json'), JSON.stringify(ids, null, 1));
   console.log(`  [previews] ${written} variant SVGs and nodes.json -> ${path.relative(process.cwd(), ASSETS)}`);
   return msg;
