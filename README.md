@@ -16,27 +16,27 @@ and need no Java, no SurfaceFlinger and no WebView.
 
 | Group | Component | What it is |
 |---|---|---|
-| Actions | [Button](docs/ai/button.md) | A text button: filled, tonal or text, in two widths. |
-| | [Icon button](docs/ai/icon_button.md) | A button with one glyph and no label, in two sizes. |
-| Selection | [Toggle](docs/ai/toggle.md) | An on/off switch. |
-| | [Radio](docs/ai/radio.md) | A group of options where one is on. |
-| | [Segmented button](docs/ai/segmented.md) | One choice of two to four. |
-| | [Dropdown](docs/ai/dropdown.md) | A pill that opens a list of choices below it. |
-| | [Slider](docs/ai/slider.md) | A value from 0 to 100, dragged with the finger. |
-| | [Tabs](docs/ai/tabs.md) | The screen's navigation. |
-| Content | [Tile](docs/ai/tile.md) | A device's card: symbol, title, value and the device's control. |
-| | [List item](docs/ai/list_item.md) | One row of a list, with a leading icon or image and a trailing end. |
-| | [Bar chart](docs/ai/bar_chart.md) | A row of 24 bars. |
-| | [Symbol](docs/ai/symbol.md) | A glyph on a soft accent background, 48 px. |
-| | [Icon](docs/ai/icon.md) | A 24 px glyph from Lucide. |
-| | [Skeleton](docs/ai/skeleton.md) | A placeholder while content loads. |
-| | [Scrollbar](docs/ai/scrollbar.md) | The thumb of a scrolling list. |
-| Over the screen | [Sheet](docs/ai/sheet.md) | A dialog or a side sheet with the app's content inside. |
-| | [Overlay](docs/ai/overlay.md) | The open and close state machine under every sheet. |
-| Input | [Input field](docs/ai/input_field.md) | A one-line text field. |
-| | [Form](docs/ai/form.md) | A sheet of input fields that submits on Enter. |
-| | [Keyboard](docs/ai/keyboard.md) | The on-screen keyboard. |
-| | [Keyboard dock](docs/ai/keyboard_dock.md) | The screen's one keyboard, open while a field has the focus. |
+| Actions | [Button](docs/content/button.md) | A text button: filled, tonal or text, in two widths. |
+| | [Icon button](docs/content/icon_button.md) | A button with one glyph and no label, in two sizes. |
+| Selection | [Toggle](docs/content/toggle.md) | An on/off switch. |
+| | [Radio](docs/content/radio.md) | A group of options where one is on. |
+| | [Segmented button](docs/content/segmented.md) | One choice of two to four. |
+| | [Dropdown](docs/content/dropdown.md) | A pill that opens a list of choices below it. |
+| | [Slider](docs/content/slider.md) | A value from 0 to 100, dragged with the finger. |
+| | [Tabs](docs/content/tabs.md) | The screen's navigation. |
+| Content | [Tile](docs/content/tile.md) | A device's card: symbol, title, value and the device's control. |
+| | [List item](docs/content/list_item.md) | One row of a list, with a leading icon or image and a trailing end. |
+| | [Bar chart](docs/content/bar_chart.md) | A row of 24 bars. |
+| | [Symbol](docs/content/symbol.md) | A glyph on a soft accent background, 48 px. |
+| | [Icon](docs/content/icon.md) | A 24 px glyph from Lucide. |
+| | [Skeleton](docs/content/skeleton.md) | A placeholder while content loads. |
+| | [Scrollbar](docs/content/scrollbar.md) | The thumb of a scrolling list. |
+| Over the screen | [Sheet](docs/content/sheet.md) | A dialog or a side sheet with the app's content inside. |
+| | [Overlay](docs/content/overlay.md) | The open and close state machine under every sheet. |
+| Input | [Input field](docs/content/input_field.md) | A one-line text field. |
+| | [Form](docs/content/form.md) | A sheet of input fields that submits on Enter. |
+| | [Keyboard](docs/content/keyboard.md) | The on-screen keyboard. |
+| | [Keyboard dock](docs/content/keyboard_dock.md) | The screen's one keyboard, open while a field has the focus. |
 
 Each link goes to the component's reference: its Figma set and variants, the parts the code
 sets, its transitions, the Rust API and the lines an app writes.
@@ -72,8 +72,8 @@ Every change ends on a branch of its own. A second agent reviews it with the pro
 when you say so.
 
 An agent that wants the library in brief reads [docs/llms.txt](docs/llms.txt): what it is, its
-principles and its rules. [docs/llms-full.txt](docs/llms-full.txt) holds every component in one
-file.
+principles and where to read next. People and programs read the same guide per component in
+[docs/content](docs/content/) and its code in [docs/examples](docs/examples/).
 
 ### Build your app by hand
 
@@ -168,13 +168,14 @@ hub-app and pairs-app use the dark one.
 |---|---|
 | [Overview](docs/content/index.md) | What lives where, the slot, and how a tap travels from the finger to the frame |
 | [Rules](docs/content/rules.md) | The twelve rules every app on the library follows |
-| [Component reference](docs/ai/) | One page per component, generated from the Figma spec, the Rust sources and the binding |
-| [Component guides](docs/content/) | The written guide per component: its role, the Figma side, the app side, the traps |
+| [Component guides](docs/content/) | The guide per component: its role, the Figma side, the app side, the traps |
+| [Examples](docs/examples/) | The code per component: create it, bind it to its slot, handle its gesture, send the event on; compiled and run by a test |
 | [Design workflow](design/WORKFLOW.md) | How the Library is built in Figma and fetched into the `.dcf` |
 | [How the docs are built](docs/README.md) | One set of sources for the reference, the guides and the site |
 
-The same content is also an HTML site with a playground per component, in `docs/site/`. To read
-it, run `python3 -m http.server -d docs 8765` and open `http://localhost:8765/site/`.
+The same content is also an HTML site with a playground per component. It is not in git: run
+`node docs/build-docs.js`, then `python3 -m http.server -d docs 8765` and open
+`http://localhost:8765/site/`.
 
 ## Repository layout
 

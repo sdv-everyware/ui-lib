@@ -34,7 +34,7 @@ Below, from the tree's top: `FIGMA=vendor/sdv-everyware/everyware/design/figma`,
 The layout is the user's decision. Before any file: two or three options as ASCII sketches of the
 1920 x 1080 screen, which Library component sits where (button, icon-button, toggle, slider,
 segmented, list-item, tile, symbol, bar-chart; `$UI/docs/llms.txt` lists them,
-`docs/ai/<component>.md` has each one's variants), a line of trade-offs per option. Wait for the
+`docs/content/<component>.md` and `components.json` have each one's variants), a line of trade-offs per option. Wait for the
 choice. Only names of generic roles: a new kind of control is a new Library component
 (ui-component skill), not a drawing in the patch.
 
@@ -105,7 +105,7 @@ action changes `state.rs`) `->` presenter (`presenter.rs`: state to UI model) `-
   type in its code (`Component` with `ComponentKind::App`, `Slotted` with the set). tv-app's
   weather pictures are an example (`design/weather-pictures.js`, `#tv-weather`, `src/weather.rs`).
   The library has components only; never add an app's content to ui-lib.
-- Each component's lines with real names: `$UI/docs/ai/<component>.md` ("In the app").
+- Each component's code with real names: `$UI/docs/examples/<component>.rs`.
 - The time comes from `clock.rs`. Data from a bundle comes on a thread of the app that sends
   actions (tv-app's `house_link.rs`: the dashboard bundle's gRPC on port 7100). Replace the
   template's description in the file headers (`new-app.sh` lists them).

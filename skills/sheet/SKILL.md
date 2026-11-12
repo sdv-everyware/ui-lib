@@ -5,8 +5,7 @@ description: Add a sheet, dialog or side panel over a screen of a harry app with
 
 # A sheet, dialog or side panel on `#sheet`
 
-Read first: `docs/ai/sheet.md` (layouts, the API, the live wiring of the app's sheets) and
-`docs/content/sheet.md` as rendered there. The library owns the container (scrim, card,
+Read first: `docs/content/sheet.md` (layouts, the API) and `docs/examples/sheet.rs` (the code). The library owns the container (scrim, card,
 slide, the layouts); the app owns the content and when it opens.
 
 ```

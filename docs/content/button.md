@@ -1,36 +1,104 @@
 ---
 title: Button
-role: A tappable text button, Material 3's filled, tonal and text button, in two widths.
+role: A button with a text that the user taps to start one action: connect, cancel, talk.
 rust: core/src/button.rs
 types: ButtonKind, ButtonSize, Button, ButtonEvent
 ---
-A button is the design's fixed size per variant (Google's components are drawn that way, the label centred in the box), not the label's width. `kind` is the look, `size` the width (200 regular for a sheet's actions, 116 compact in a widget's row), `state` only `default` or `disabled`: pressed is a layer the code fades, not a variant.
+The user taps a button with a word on it (Connect, Cancel, Talk). It darkens under the finger and does nothing if the finger slides off. The app gets one `Clicked` per tap and decides what it means, usually a command to a service. The app can relabel the button and turn it off while it cannot act.
 
-## In Figma
-A button on a screen is a slot of the design's size: a frame 200 × 56 (`size=regular`) or 116 × 56 (`size=compact`) named `#<screen>/<name>` (for example `#wifi/connect`), with an instance of `#button` inside. The instance's label is the designer's preview; the app writes the real label into `#button/label`. Place two buttons as two slots, never one instance twice.
+## When to use it
+- One action with a word for it: the action of a sheet (Connect, Cancel), a widget's own action (Talk). For an action that has a well-known glyph (plus, minus, close) use `#icon-button`.
+- Not for a state that stays on or off (use `#toggle`) and not for one choice of a few (use `#segmented` or `#radio`).
 
-## In the app
+## Quick start
+**What.** The Talk button of the panel: the user taps it, the app gets one click and sends a command to the intercom.
+
+**Why.** The button only knows that it was tapped. What the tap means is the app's decision, so the app turns the click into a command.
+
+<!-- example: docs/examples/button.rs use slot=#intercom/talk field=talk -->
 ```rust
-// state: the component
-pub connect: Button,                                    // Button::new(ButtonKind::Primary, "Connect")
-pub talk: Button,                                       // Button::new(ButtonKind::Primary, "Talk").compact()
+use everyware_ui::button::{Button, ButtonEvent, ButtonKind};
+```
 
-// ui_model: one Slot per place on the screen
-wifi_connect: Slot = "#wifi/connect" ["SlotCustomizer"];
+<!-- example: docs/examples/button.rs state slot=#intercom/talk field=talk -->
+```rust
+pub talk: Button,
+```
 
-// presenter: the slot gets the component (variant, label, pressed fade)
-model.wifi_connect = slot("#wifi/connect", &wifi.connect);
+<!-- example: docs/examples/button.rs init slot=#intercom/talk field=talk -->
+```rust
+talk: Button::new(ButtonKind::Primary, "Talk").compact(),
+```
 
-// actions: the gesture harry reported for the node goes to the button; it answers Clicked
+<!-- example: docs/examples/button.rs model slot=#intercom/talk field=talk -->
+```rust
+talk: Slot = "#intercom/talk" ["SlotCustomizer"];
+```
+
+<!-- example: docs/examples/button.rs present slot=#intercom/talk field=talk -->
+```rust
+model.talk = slot("#intercom/talk", &state.talk);
+```
+
+<!-- example: docs/examples/button.rs act slot=#intercom/talk field=talk -->
+```rust
 "#intercom/talk" => {
-    if d.talk.on(gesture) == Some(ButtonEvent::Clicked) {
-        log::info!("smarthome: Talk");
+    if let Some(ButtonEvent::Clicked) = state.talk.on(gesture) {
+        // the tap is done: send it on to the service that acts on it
+        if !send(Command::Talk) {
+            log::warn!("talk: the service is not there, nothing was sent");
+        }
     }
 }
 ```
 
-Disable with `button.press.enabled = false` (the variant becomes `state=disabled`, never animated).
+<!-- example: docs/examples/button.rs send slot=#intercom/talk field=talk -->
+```rust
+/// What the screen asks a service to do. An app has its own link to the service (smarthome-app:
+/// screen_binder::send_matter_command, a binder call to the Matter bundle); this one stands in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Command {
+    Talk,
+}
+
+/// Hands the command to the service; false when the service is not there (nothing is queued).
+pub fn send(command: Command) -> bool {
+    log::info!("send {command:?}");
+    true
+}
+```
+
+## How it behaves
+- **Pressed.** While the finger is down the button darkens: a layer fades in over 80 ms and out over 160 ms. The variant stays.
+- **Tap.** A down and an up on the button is one `Clicked`. A finger that slides off undoes the press; coming back does not restore it, and the up is no tap.
+- **Disabled.** `press.set_enabled(false)` shows `state=disabled` (paler, no press) and the button takes no taps. It switches without an animation.
+- **Label.** The label is the app's and is centred; a longer label does not make the button wider.
+
+## From the app
+**What.** The app changes the button from what it knows, without a tap: another label (Talk becomes End during a call), or off while the service is not there.
+
+**Why.** The button shows what the app can do now. A tap on a button that cannot work would do nothing, so the app turns it off. Its state is plain fields: `label`, `kind`, `size`, and `press` for on and off.
+
+<!-- example: docs/examples/button.rs change slot=#intercom/talk field=talk -->
+```rust
+/// The app changes the button from its own state, outside a tap: a new label, or off while it
+/// cannot act (no service). The presenter shows it at the next frame: the label as text, off as
+/// the variant state=disabled, which takes no taps.
+pub fn on_call(state: &mut State, in_call: bool, service_up: bool) {
+    state.talk.label = if in_call { "End".into() } else { "Talk".into() };
+    state.talk.press.set_enabled(service_up);
+}
+```
+
+## In Figma
+A slot of the variant's size named `#<screen>/<name>` (`#intercom/talk`, `#wifi/connect`): 200 × 56 for `size=regular` (a sheet's actions), 116 × 56 for `size=compact` (a widget's row). Inside it an instance of `#button`. The instance's label is the designer's preview; the app writes the real one. Two buttons are two slots, never one instance twice.
+
+## How it works
+`kind` is the look (`primary` filled, `secondary` soft, `ghost` text only), `size` the width, `state` only `default` or `disabled`. Pressed is not a variant: `#button/pressed` is a layer whose opacity the binding fades (display-only in harry, no tree rebuild). The label is `#button/label`. `Button::new(kind, label)` makes a regular one, `.compact()` the narrow one.
 
 ## Traps
-- A label changed at runtime needs the text node named `#button/label` in every variant; a renamed inner layer is lost on a variant swap, a text override is kept.
+- A label changed at runtime needs the text node named `#button/label` in every variant: a renamed inner layer is lost on a variant swap, a text override is kept.
 - Two buttons on one screen must sit in two slots: harry finds parts by node name, and the slot gives each clone its own scope.
+
+## Example
+[docs/examples/button.rs](../examples/button.rs): the whole path, from a tap on the button to the command to the service and a new label from the app, compiled and run by `everyware_ui_recipes_test`.

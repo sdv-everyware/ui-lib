@@ -2,6 +2,8 @@
 
 The UI component library of SDV EveryWare: Figma component sets (one per role, Material 3 names), Rust state machines (everyware_ui_core), the binding to the harry UI framework (everyware_ui), used by harry apps on embedded devices (no Android framework).
 
+This file is written by hand and is the entry for a program. Everything it points to is a source: nothing under docs/ in git is generated.
+
 ## Principles
 1. One truth, one direction: Action → state → UI model → pixels. Nothing on the screen writes back: a tap is an action like a message from a bundle, so a frame is a function of the state, testable on the host.
 2. Figma decides how it looks, code decides what happens: Geometry, colours, variants and names come from the .fig; which variant shows, what a tap does and the data come from Rust. Figma's Play prototype is for people looking at the design: harry never reads it.
@@ -12,56 +14,35 @@ The UI component library of SDV EveryWare: Figma component sets (one per role, M
 7. One spec, two readers: components.json names the sets, their variants and transitions. The Figma generator and the Rust library read the same file, so they cannot disagree.
 8. Roles, not contexts: A component is named by its role (button, list item, tile: Material 3), never by what the app puts in it. A new need extends a property or a part before a new component is made.
 
-## One tap, six stages (the architecture of a harry app; every component page follows it)
-1. gesture (ui_event_listener.rs, figma): The slot frame is named in Figma (#entryway/light). harry hit-tests the drawn tree under the finger and reports Down, Move, Up with that name; the app's listener (written once) turns it into an action of the app. Data from the bundles arrives as actions the same way. Code: HomeAction::Gesture(node, gesture)
-2. actions (actions.rs, the app): One apply() takes every action. For a gesture it matches the node name and hands the gesture to the component living there; the component updates itself (pressed, on or off) and returns an event when something completed. On the event the app acts: sends the command, opens the sheet. Code: state.light.on(gesture)  →  Some(ToggleEvent::Toggled(on))
-3. state (state.rs, the app): One struct owns everything the screen knows: one component value per place on the screen, and the data. Nothing else remembers anything; a test builds a State, applies actions and reads it. Code: pub light: Toggle,
-4. presenter (presenter.rs, the app): After every action a pure function turns the state into the UI model: each component into its slot, with the variant string the component chose, its texts, the values of its parts and the transition of the last change (components.json). Code: model.light = slot("#entryway/light", &state.light);
-5. UI model (ui_model.rs, the app): One field per #name the app touches. The names are the contract with the design: rename both or neither. The SlotCustomizer turns the field into harry's customizations: which variant to clone, which text, which opacity, which meter. Code: light: Slot = "#entryway/light" ["SlotCustomizer"];
-6. harry draws (the framework, the .dcf, harry): harry clones the chosen variant from the Library into the slot, applies the parts, animates by the transition and renders with Impeller. The picture is Figma's (fetched into the .dcf), the decision is the code's. Figma's Play prototype is for people looking at the design: harry never reads it. Code: clone the variant → apply the parts → animate → render
-
 ## Read next
-- docs/ai/<component>.md: one component (1-3 KB): Figma set and variants, parts, transitions, Rust API, the four lines the app writes, guide, check; docs/llms-full.txt is all of them in one file
-- docs/site/: the same content rendered for people (pictures, the tap simulation)
-- components.json: the machine-readable spec (sets, properties, transitions); the Rust library and the Figma generator read it
-- skills/new-app/SKILL.md: a new board as an app of its own from one sentence (scripts/new-app.sh, the design patch, fig-to-dcf.sh, the RB3)
-- skills/ui-component/SKILL.md and traps.md: how to add or change a component (spec, Figma generator, Rust, binding, app)
-- ../everyware/skills/figma-design/SKILL.md: screens, sheets and the designer's prototype
-- skills/harry-app/SKILL.md, reference.md and traps.md: a harry app end to end (state, actions, presenter, UI model, build, run, debug)
-
-## Rules (what every harry app with this library does)
-1. One `Slot` field in the UI model per component on the screen, bound to the slot's node name; the presenter fills it with `slot("#node", &component)` (lists: `list(...)`, scrollbars: `scrollbar(...)`, a grid of one component: `grid("#node", &cells, columns, (pitch_x, pitch_y))`, one field for the whole grid, taps as `"#node/<index>"` through `row_of`). A whole component is hidden with `slot_shown("#node", &component, false)` or `grid_shown(...)`: opacity 0 and no taps, so a tap reaches what lies under it; never a hidden layer.
-2. The variant string is exact and ordered as the set's properties: `kind=primary, state=default, size=regular`. `Component::variant()` produces it; never type it by hand in an app.
-3. A variant change rebuilds the node (~50 ms on the RB3): the variant carries only what rarely changes (kind, disabled, selected). Pressed, fades, thumbs, carets are meters and opacities (`parts`), display-only, smooth.
-4. Gestures: the app routes `HomeAction::Gesture(node, gesture)` by node name to the component's `on(gesture)`; the component answers with an event (`ButtonEvent::Clicked`, `ListEvent::Chosen(row)`, `FormEvent::Submitted`).
-5. Transitions come from components.json through the component (`transition()`), never from Figma's prototype: harry does not read prototype animations.
-6. Nothing hidden in Figma: a hidden layer is `display: none` forever. The app hides with opacity or visibility.
-7. A sheet over the screen is the library's `#sheet` with a content component swapped into its slot; the app never sets the sheet's variant, it moves the card (`Sheet::card_position`) and fades the scrim.
-8. Texts the code writes end with an ellipsis after their lines (`maxLines`, `textTruncation`), letter spacing 0, a preview text of at least a space.
-9. Pictures only on a plain rectangle node (`#list-item/image`, `#tile/image`), registered by key (`everyware_ui::images`).
-10. Check the contract against the design: `everyware_ui_test` (host) fails when a variant or a part the code uses is not in the app's .dcf.
-11. Behaviour is code: what a tap does, which variant shows, the data. Figma's prototype (taps, overlays, transitions in Play) is for designers only and never reaches harry; the prototype is a picture of the code, the device is right when they differ.
-12. The library knows no use case: a component is named by its role (pictogram, bar chart, list item), never by what an app shows with it; the mapping from an app's data to a component's values is the app's (`scripts/check-roles.py`).
+- docs/content/index.md: how a component lives in Figma, the spec and the code; one tap in six stages
+- docs/content/rules.md: the rules every harry app with this library follows
+- docs/content/<component>.md: one component: its role, how to put it in Figma, the traps; its front matter names the Rust file
+- docs/examples/<component>.rs: the code an app writes for it (state, UI model, presenter, the gesture's arm, sending the event on), compiled and run by everyware_ui_recipes_test
+- components.json: the sets, their properties and values, the transitions
+- the Rust file its guide's front matter names (`rust:`): the state machine and its API with /// docs; harry/src/slot.rs: the parts the code sets (impl Slotted)
+- skills/new-app/SKILL.md, skills/use-component/SKILL.md, skills/ui-component/SKILL.md and traps.md, skills/harry-app/SKILL.md: the tasks
+- docs/site/ (built by `node docs/build-docs.js`, not in git): the same, rendered for people with previews and a tap simulation
 
 ## Components
-- #button: A tappable text button, Material 3's filled, tonal and text button, in two widths. (docs/ai/button.md)
-- #icon-button: A tappable button with one glyph and no label, Material 3's icon button, in two sizes. (docs/ai/icon_button.md)
-- #toggle: An on/off switch, Material 3's switch: the value moves the thumb and fades the track, the variant is only the state. (docs/ai/toggle.md)
-- #radio: A group of radio buttons where one option is on; the group owns the selection, each button is a variant. (docs/ai/radio.md)
-- #dropdown: A closed pill that opens a list of items below it; the open list and the selected item are opacities, the variant only the state. (docs/ai/dropdown.md)
-- #list-item: One row of a list, Material 3's list item, with a leading icon or image, a headline, supporting text and a trailing end; rows live in a ListView. (docs/ai/list_item.md)
-- #scrollbar: The thumb of a scrolling list: a vertical progress marker along a track, faded in while the list moves. (docs/ai/scrollbar.md)
-- #icon: A 24 px glyph (Lucide) for the slots of other components; display only, no state. (docs/ai/icon.md)
-- #segmented: One choice of two to four, Material 3's segmented button: the segments are tap targets, the selected one is lit by opacity. (docs/ai/segmented.md)
-- #tabs: The screen's navigation, Material 3's tabs: the chosen tab is lit by opacity, a tap switches the screen with the screens' effect. (docs/ai/tabs.md)
-- #tile: A device's card, Material 3's card for a smart home device: a symbol, a title, a subtitle, a value and the device's control; a tap on the card opens the device, the control inside changes it. (docs/ai/tile.md)
-- #skeleton: a placeholder while content loads (Material's skeleton loader): grey shapes where the content will be, a heading bar, four text lines or a 16:9 picture, 440 or 832 wide (wide: a side panel's 880 content less 24 on each side) (docs/ai/skeleton.md)
-- #symbol: The tile of a room's or a device's symbol: 48 px, the soft accent background, one glyph in ink; display only. (docs/ai/symbol.md)
-- #keyboard: The on-screen keyboard: rows of keys with a character each, pressed keys fade a layer; one component, not a set. (docs/ai/keyboard.md)
-- #slider: A horizontal slider: the fill and the thumb are meters the code moves, the variant is only the state. (docs/ai/slider.md)
-- #bar-chart: A row of 24 bars, each with a level and an accent; display only. The app decides what a bar stands for. (docs/ai/bar_chart.md)
-- <app>-sheet: The state machine of anything shown over the screen: closed or open, with the open and close transitions; the base of Sheet and Form. (docs/ai/overlay.md)
-- <app>-sheet: A sheet with input fields: a tap focuses a field, the screen's keyboard dock opens and types into it, Enter submits. (docs/ai/form.md)
-- #keyboard-dock: The screen's one keyboard: an overlay at the bottom with the keyboard component in its slot, open while a field has the focus. (docs/ai/keyboard_dock.md)
-- #input-field: A one-line text field: the focus ring, the caret and the placeholder are opacities, the variant is only the state. (docs/ai/input_field.md)
-- #sheet: The container for anything over the screen, Material 3's dialog and side sheet, with the app's content component in its slot. (docs/ai/sheet.md)
+- #button: A tappable text button, Material 3's filled, tonal and text button, in two widths. (docs/content/button.md, example docs/examples/button.rs)
+- #icon-button: A tappable button with one glyph and no label, Material 3's icon button, in two sizes. (docs/content/icon_button.md, example docs/examples/icon_button.rs)
+- #toggle: An on/off switch, Material 3's switch: the value moves the thumb and fades the track, the variant is only the state. (docs/content/toggle.md, example docs/examples/toggle.rs)
+- #radio: A group of radio buttons where one option is on; the group owns the selection, each button is a variant. (docs/content/radio.md, example docs/examples/radio.rs)
+- #dropdown: A closed pill that opens a list of items below it; the open list and the selected item are opacities, the variant only the state. (docs/content/dropdown.md, example docs/examples/dropdown.rs)
+- #list-item: One row of a list, Material 3's list item, with a leading icon or image, a headline, supporting text and a trailing end; rows live in a ListView. (docs/content/list_item.md, example docs/examples/list_item.rs)
+- #scrollbar: The thumb of a scrolling list: a vertical progress marker along a track, faded in while the list moves. (docs/content/scrollbar.md, example docs/examples/scrollbar.rs)
+- #icon: A 24 px glyph (Lucide) for the slots of other components; display only, no state. (docs/content/icon.md, example docs/examples/icon.rs)
+- #segmented: One choice of two to four, Material 3's segmented button: the segments are tap targets, the selected one is lit by opacity. (docs/content/segmented.md, example docs/examples/segmented.rs)
+- #tabs: The screen's navigation, Material 3's tabs: the chosen tab is lit by opacity, a tap switches the screen with the screens' effect. (docs/content/tabs.md, example docs/examples/tabs.rs)
+- #tile: A device's card, Material 3's card for a smart home device: a symbol, a title, a subtitle, a value and the device's control; a tap on the card opens the device, the control inside changes it. (docs/content/tile.md, example docs/examples/tile.rs)
+- #skeleton: a placeholder while content loads (Material's skeleton loader): grey shapes where the content will be, a heading bar, four text lines or a 16:9 picture, 440 or 832 wide (wide: a side panel's 880 content less 24 on each side) (docs/content/skeleton.md, example docs/examples/skeleton.rs)
+- #symbol: The tile of a room's or a device's symbol: 48 px, the soft accent background, one glyph in ink; display only. (docs/content/symbol.md, example docs/examples/symbol.rs)
+- #keyboard: The on-screen keyboard: rows of keys with a character each, pressed keys fade a layer; one component, not a set. (docs/content/keyboard.md, example docs/examples/keyboard.rs)
+- #slider: A horizontal slider: the fill and the thumb are meters the code moves, the variant is only the state. (docs/content/slider.md, example docs/examples/slider.rs)
+- #bar-chart: A row of 24 bars, each with a level and an accent; display only. The app decides what a bar stands for. (docs/content/bar_chart.md, example docs/examples/bar_chart.rs)
+- <app>-sheet: The state machine of anything shown over the screen: closed or open, with the open and close transitions; the base of Sheet and Form. (docs/content/overlay.md, example docs/examples/overlay.rs)
+- <app>-sheet: A sheet with input fields: a tap focuses a field, the screen's keyboard dock opens and types into it, Enter submits. (docs/content/form.md, example docs/examples/form.rs)
+- #keyboard-dock: The screen's one keyboard: an overlay at the bottom with the keyboard component in its slot, open while a field has the focus. (docs/content/keyboard_dock.md, example docs/examples/keyboard_dock.rs)
+- #input-field: A one-line text field: the focus ring, the caret and the placeholder are opacities, the variant is only the state. (docs/content/input_field.md, example docs/examples/input_field.rs)
+- #sheet: The container for anything over the screen, Material 3's dialog and side sheet, with the app's content component in its slot. (docs/content/sheet.md, example docs/examples/sheet.rs)

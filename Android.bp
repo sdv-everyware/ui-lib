@@ -94,19 +94,20 @@ rust_test_host {
     test_suites: ["general-tests"],
 }
 
-// The recipes the docs show (docs/recipes.js -> docs/recipes/recipes.rs, written by
-// docs/build-docs.js): every component's lines in one small app, compiled and tapped, so a
-// recipe that does not build fails here and not in an app.
+// The examples the docs show (docs/examples/<component>.rs, one small app per component):
+// compiled and tapped, so an example that does not build fails here and not in an app.
 rust_test_host {
     name: "everyware_ui_recipes_test",
     crate_name: "everyware_ui_recipes",
-    crate_root: "docs/recipes/recipes.rs",
-    srcs: ["docs/recipes/recipes.rs"],
+    // the examples of the guides (docs/content/<component>.md), one module per component
+    crate_root: "docs/examples/lib.rs",
+    srcs: ["docs/examples/*.rs"],
     rustlibs: [
         "libcustomizations",
         "libeveryware_ui",
         "libhar_platform_api",
         "libharry",
+        "liblog_rust",
     ],
     proc_macros: [
         "libderive_customizations",

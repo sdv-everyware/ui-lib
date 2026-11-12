@@ -7,8 +7,9 @@
 #
 # 1. tests: every changed Rust module has tests; the two host tests pass
 # 2. coverage: line coverage of the changed core modules (scripts/coverage.sh), the total
-# 3. docs: the site, docs/ai, llms.txt and llms-full.txt are what docs/build-docs.js produces from the
-#    sources now (nothing stale is committed); a changed component has its written guide
+# 3. docs: the site builds from the sources and nothing generated is in git; every component has
+#    its guide, its line in docs/llms.txt and its example; a
+#    component whose code changed without its guide or example is named (a note)
 # 4. the commit itself: the author, nothing private in the diff
 # 5. roles: no name of the API says what an app is about (scripts/check-roles.py)
 here=$(cd "$(dirname "$0")" && pwd)
@@ -40,7 +41,12 @@ done
 for t in everyware_ui_core_test everyware_ui_test everyware_ui_recipes_test; do
     bin="$top/$out/host/linux-x86/nativetest64/$t/$t"
     if [ ! -x "$bin" ]; then fail "$t not built (m $t)"; continue; fi
-    if [ -n "$(find core harry components.json -newer "$bin" -name '*.rs' -o -newer "$bin" -name components.json 2>/dev/null)" ]; then
+    case $t in   # each test against the sources it is built from (Android.bp)
+        everyware_ui_core_test) src=core ;;
+        everyware_ui_test) src="core harry" ;;
+        *) src="core harry docs/examples" ;;
+    esac
+    if [ -n "$(find $src components.json -newer "$bin" \( -name '*.rs' -o -name components.json \) 2>/dev/null)" ]; then
         fail "$t is older than the sources: m $t, then run again"
         continue
     fi
@@ -66,21 +72,22 @@ else
 fi
 
 echo "== 3. docs"
-# stale = the generator changes a file: what is on disk (and goes into the commit) is not what the sources produce
-docs_hash() { find docs/site docs/ai docs/llms.txt docs/llms-full.txt -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum; }
-before=$(docs_hash)
-if ! node docs/build-docs.js > /dev/null 2>&1; then fail "docs/build-docs.js failed"; else
-    if [ "$before" != "$(docs_hash)" ]; then fail "docs were stale, regenerated now: review and git add docs"; git status --porcelain docs | sed 's/^/       /'; else echo "  ok   docs/site, llms.txt, llms-full.txt match the sources"; fi
-fi
+# the sources are whole when the site builds from them; what it builds is not committed
+if ! node docs/build-docs.js > /dev/null 2>&1; then fail "docs/build-docs.js failed: run it to see why"; else echo "  ok   the site builds from the sources"; fi
+tracked=$(git ls-files docs/site docs/ai docs/llms-full.txt docs/recipes docs/assets)
+[ -z "$tracked" ] && echo "  ok   nothing generated in git" || { fail "generated files in git (they are built, not committed): git rm --cached them"; echo "$tracked" | head -5 | sed 's/^/       /'; }
+# every component: its guide, its line in llms.txt (the entry), its example
+for name in $(python3 -c "import json; print(' '.join(json.load(open('components.json'))['components']))"); do
+    [ -f "docs/content/$name.md" ] || fail "docs/content/$name.md: #${name//_/-} has no guide"
+    grep -q "docs/content/$name.md" docs/llms.txt || fail "docs/llms.txt: #${name//_/-} is not in the list of components"
+    [ -f "docs/examples/$name.rs" ] || fail "docs/examples/$name.rs: #${name//_/-} has no example"
+done
+# a changed component and its docs: the author decides whether they are still right
+if [ "$1" != --all ]; then "$here/changed-components.py" | while read -r line; do note "$line"; done; fi
 # the guides name only things that exist (a renamed fn or layer fails here)
 if g=$(node docs/check-guides.js 2>&1); then echo "  ok   $g"; else fail "the guides name things that do not exist:"; echo "$g" | sed 's/^/       /'; fi
 # the app's slots against its design: the app's own tree, so a note here, the FAIL is the app's commit
 if a=$(node docs/check-guides.js --app 2>&1); then echo "  ok   $a"; else note "the app's ui_model.rs binds names its .dcf does not have (fetch, or the app's WIP):"; echo "$a" | sed 's/^/       /' | head -8; fi
-for f in $rs; do
-    name=$(basename "$f" .rs)
-    python3 -c "import json, sys; sys.exit(sys.argv[1] not in json.load(open('components.json'))['components'])" "$name" || continue
-    [ -f "docs/content/$name.md" ] && echo "  ok   docs/content/$name.md" || note "docs/content/$name.md: no written guide for #${name//_/-} yet"
-done
 
 echo "== 4. the commit"
 email=$(git config user.email)
