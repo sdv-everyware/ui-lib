@@ -7,7 +7,7 @@
 //! A new animation is one more effect here, with its test: the tabs and the apps stay as they
 //! are, the app names the effect in one place.
 
-use crate::transitions::{Easing, Transition};
+use crate::transitions::{self, Change, ComponentKind, Easing, Transition};
 use std::time::Duration;
 
 /// How the screens change on a switch.
@@ -77,6 +77,46 @@ impl Effect {
     }
 }
 
+/// Pages that take turns in one place without tabs: a sheet's settings and the list one of its
+/// rows opens, as Android's Settings goes one page deeper and Back comes back (Material 3's shared
+/// axis: Effect::Slide). Which page shows and which showed before; the effect places every page.
+/// The switch takes the tabs' time (components.json, tabs/switch).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Pages {
+    /// The page that shows.
+    pub selected: usize,
+    /// The page before it, while there was one.
+    pub previous: Option<usize>,
+}
+
+impl Pages {
+    /// Shows page `page`; the one that showed leaves with the effect.
+    pub fn show(&mut self, page: usize) {
+        if page != self.selected {
+            self.previous = Some(self.selected);
+            self.selected = page;
+        }
+    }
+
+    /// Back to the first page with nothing before it (a sheet that opens again starts there):
+    /// the pages take their places at once, nothing slides.
+    pub fn reset(&mut self) {
+        *self = Pages::default();
+    }
+
+    /// The time of a switch: the tabs'.
+    pub fn switch_transition() -> Option<Transition> {
+        transitions::transition(ComponentKind::Tabs, Change::Switch)
+    }
+
+    /// Where page `page` goes with this effect; `width` is the distance between two pages of a
+    /// slide. Before the first switch (or after a reset) nothing moves.
+    pub fn page(&self, page: usize, effect: Effect, width: f32) -> ScreenTarget {
+        let switch = self.previous.and(Self::switch_transition());
+        effect.target(page, self.selected, self.previous, width, switch)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,6 +154,24 @@ mod tests {
         assert_eq!(ms(t(2).offset_transition), Some((0, 300)));
         // back to the right: the direction follows the order
         assert_eq!(Effect::Slide.target(1, 0, Some(2), 1920.0, SWITCH).offset, Some(1920.0));
+    }
+
+    #[test]
+    fn pages_go_one_deeper_and_back_as_a_slide() {
+        let mut pages = Pages::default();
+        pages.show(1);
+        // the deeper page comes from the right, the first leaves to the left
+        assert_eq!((pages.page(1, Effect::Slide, 880.0).offset, pages.page(0, Effect::Slide, 880.0).offset), (Some(0.0), Some(-880.0)));
+        assert_eq!(ms(pages.page(1, Effect::Slide, 880.0).offset_transition), Some((0, 300)));
+        pages.show(0);
+        assert_eq!((pages.selected, pages.previous, pages.page(1, Effect::Slide, 880.0).offset), (0, Some(1), Some(880.0)));
+        // showing the page that shows changes nothing
+        pages.show(0);
+        assert_eq!(pages.previous, Some(1));
+        pages.reset();
+        assert_eq!(pages, Pages::default());
+        // after a reset the pages take their places at once
+        assert_eq!(pages.page(0, Effect::Slide, 880.0).offset_transition, None);
     }
 
     #[test]

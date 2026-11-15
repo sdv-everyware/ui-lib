@@ -60,7 +60,9 @@ pub enum ListItemSize {
     Regular,
     /// 490 wide: a column of a dashboard.
     Column,
-    /// 960 wide: a sheet's list.
+    /// 856 wide: the content of a left or right sheet (880) beside a scrollbar.
+    Panel,
+    /// 960 wide: a dialog sheet's list.
     Wide,
 }
 
@@ -186,6 +188,7 @@ impl Component for ListItem {
         let size = match self.size {
             ListItemSize::Regular => "regular",
             ListItemSize::Column => "column",
+            ListItemSize::Panel => "panel",
             ListItemSize::Wide => "wide",
         };
         format!("state={state}, kind={kind}, lines={lines}, size={size}")
@@ -219,6 +222,12 @@ mod tests {
         let item = ListItem::new(ListItemKind::Text, "Firmware", "").lines(ListItemLines::One).size(ListItemSize::Column).trailing_text("0.1.0");
         assert_eq!(item.variant(), "state=default, kind=text, lines=one, size=column");
         assert_eq!(item.trailing_text, "0.1.0");
+    }
+
+    #[test]
+    fn a_row_of_a_side_sheet() {
+        let item = ListItem::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00").lines(ListItemLines::Two).size(ListItemSize::Panel);
+        assert_eq!(item.variant(), "state=default, kind=plain, lines=two, size=panel");
     }
 
     #[test]

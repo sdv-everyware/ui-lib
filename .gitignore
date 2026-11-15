@@ -1,4 +1,6 @@
 .vscode/
+# the backups design/build-library.sh --dcf keeps of the older document
+data/*.dcf.*
 *.v[0-9]*
 
 # design/build.sh output: built again from the patches, opened in Figma from here

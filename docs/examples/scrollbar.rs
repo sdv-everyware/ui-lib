@@ -11,8 +11,7 @@ use everyware_ui::list_view::ListView;
 // doc:end
 use everyware_ui::list_item::{ListItem, ListItemKind, ListItemLines, ListItemSize};
 
-/// The list's slot is 744 high (the scrollbar's variant length=744); rows 128 high, 8 between.
-const LIST_H: f32 = 744.0;
+/// Rows 128 high, 8 between; the list is as high as its slot in the design (#news/list).
 const ROW_PITCH: f32 = 128.0 + 8.0;
 
 // state.rs: in struct State, and its first value in State::new
@@ -27,7 +26,8 @@ impl State {
     pub fn new(sizes: &Sizes) -> Self {
         State {
             // doc:init
-            my_list: ListView::new([], LIST_H, ROW_PITCH),
+            // as high as the design draws the list's slot: no height in the code
+            my_list: ListView::new([], sizes.frame("#news/list").map_or(0.0, |f| f.height), ROW_PITCH),
             // doc:end
         }
     }
@@ -63,6 +63,12 @@ pub fn show_titles(state: &mut State, titles: &[&str]) {
 #[cfg(test)]
 const TITLES: [&str; 12] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
+/// The state with a list 744 high, as a design would give it.
+#[cfg(test)]
+fn state_744() -> State {
+    State { my_list: ListView::new([], 744.0, ROW_PITCH) }
+}
+
 /// A drag of the list: down, up by `dy`, lift with `velocity` (pixels a second, up is negative).
 #[cfg(test)]
 fn drag(state: &mut State, dy: f32, velocity: f32, now: Instant) {
@@ -72,19 +78,19 @@ fn drag(state: &mut State, dy: f32, velocity: f32, now: Instant) {
 }
 
 #[test]
-fn scrollbar_is_the_variant_of_the_list_s_height_and_hidden_at_rest() {
+fn scrollbar_is_one_component_and_hidden_at_rest() {
     let mut state = State::new(&Sizes::none());
     let mut model = UiModel::new(HashMap::new());
     show_titles(&mut state, &TITLES);
     present(&mut model, &state);
-    assert_eq!(scrollbar("#doc/scrollbar", &state.my_list).items()[0].variant(), "length=744");
+    assert_eq!(scrollbar("#doc/scrollbar", &state.my_list).items()[0].variant(), "state=default");
     let now = Instant::now();
     assert_eq!((state.my_list.thumb(now), state.my_list.scroll().scrollbar_shown(now).0), (0.0, false));
 }
 
 #[test]
 fn scrollbar_shows_while_the_list_moves_and_fades_after() {
-    let mut state = State::new(&Sizes::none());
+    let mut state = state_744();
     show_titles(&mut state, &TITLES);
     let now = Instant::now();
     drag(&mut state, 200.0, 0.0, now);
@@ -98,7 +104,7 @@ fn scrollbar_shows_while_the_list_moves_and_fades_after() {
 
 #[test]
 fn scrollbar_a_fling_takes_the_thumb_to_the_end() {
-    let mut state = State::new(&Sizes::none());
+    let mut state = state_744();
     show_titles(&mut state, &TITLES);
     let now = Instant::now();
     drag(&mut state, 300.0, -8000.0, now);
@@ -107,7 +113,7 @@ fn scrollbar_a_fling_takes_the_thumb_to_the_end() {
 
 #[test]
 fn scrollbar_follows_new_rows_that_fit() {
-    let mut state = State::new(&Sizes::none());
+    let mut state = state_744();
     show_titles(&mut state, &TITLES);
     drag(&mut state, 200.0, 0.0, Instant::now());
     // three rows fit in the slot: nothing scrolls, the thumb is back at the top

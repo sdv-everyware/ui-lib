@@ -28,7 +28,8 @@ pub list: ListView,
 
 <!-- example: docs/examples/scrollbar.rs init slot=#news/scrollbar field=news_scrollbar -->
 ```rust
-list: ListView::new([], LIST_H, ROW_PITCH),
+// as high as the design draws the list's slot: no height in the code
+list: ListView::new([], sizes.frame("#news/list").map_or(0.0, |f| f.height), ROW_PITCH),
 ```
 
 <!-- example: docs/examples/scrollbar.rs model slot=#news/scrollbar field=news_scrollbar -->
@@ -68,13 +69,13 @@ pub fn show_titles(state: &mut State, titles: &[&str]) {
 ```
 
 ## In Figma
-A slot of the list's height, 8 wide, beside the list's slot (`#news/scrollbar` next to `#news/list`), with an instance of `#scrollbar` of that `length`. Not inside the list's slot: there it would scroll away with the rows.
+A slot as high as the list, beside the list's slot (`#news/scrollbar` next to `#news/list`), that clips, with an instance of `#scrollbar` whose bottom is at the slot's bottom: everyware's `fig-helpers.js` `scrollbarSlot(parent, name, x, y, height)` draws it. Not inside the list's slot: there it would scroll away with the rows.
 
 ## How it works
-The variant is `length`, the list's height in pixels (`472`, `744`): `scrollbar(...)` takes it from the `ListView`'s height. The thumb `#scrollbar/thumb` is a vertical progress marker, 0 at the top and 100 at the bottom, set from the scroll every frame. The whole clone fades: opacity 1 while the content moves and `SCROLLBAR_DELAY` (300 ms) after, then 0 with the transition `hide`. harry wakes up when the delay ends; the app sends nothing.
+One component serves a list of any height, as Android draws a view's scrollbar from the list's extent (`View.onDrawScrollBars`). It is drawn as high as the screen (1080). `scrollbar(...)` puts the clone with its bottom at the list's bottom and sets the track `#scrollbar/track`, a vertical progress bar that grows from the bottom, to the `ListView`'s height. The thumb `#scrollbar/thumb`, a vertical progress marker, moves along that part, set from the scroll every frame. The whole clone fades: opacity 1 while the content moves and `SCROLLBAR_DELAY` (300 ms) after, then 0 with the transition `hide`. harry wakes up when the delay ends; the app sends nothing.
 
 ## Traps
-- A list height that is not a `length` of the set has no variant: add the length to `components.json` and the design, or give the list a height the set has.
+- The `ListView`'s height must be the list slot's height in the design, or the track ends above or below the list: read it from the design (`Sizes::frame` of the list's slot, as the example does; `Sizes::part` for a list inside a component's variant), do not type it.
 - A scrollbar inside the list's slot scrolls with the content: a slot of its own, next to the list.
 - The marker is the shape itself (a rounded rect with the meter), not a frame with children: harry moves a marker's own shape.
 - Give `scrollbar(...)` the same `ListView` as `list(...)`, not a copy: a copy does not scroll.

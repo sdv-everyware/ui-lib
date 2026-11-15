@@ -63,6 +63,7 @@ _ if node == "#news/list" || node.starts_with("#news/list/") => {
 - **Catching a fling.** A finger on a running fling stops it where it is. That press is never a tap.
 - **Tap.** Down and up on the same row without a drag: the row was chosen. While the finger is down the row shows its pressed layer.
 - **Selected.** `select(Some(row))` marks one row (the variant `state=selected`) and clears the others.
+- **Scroll to a row.** `scroll_to(row)` puts the row at the top at once, or as near as the content lets it, as `RecyclerView.scrollToPosition` does: a list that opens on the chosen row.
 - **Disabled.** `row.press.set_enabled(false)` shows `state=disabled`; a tap does not choose it.
 - **Picture.** A row of kind `image` shows the picture registered under its key; until it comes, the design's placeholder.
 
@@ -96,7 +97,7 @@ pub fn show_picture(id: u64, rgb: &[u8], width: u32, height: u32) {
 ```
 
 ## In Figma
-One slot for all the rows: a frame named `#<screen>/<name>` (`#news/list`) as wide as a row (`regular` 440, `column` 490, `wide` 960) and as high as the rows it shows, with **Clip content** on. Inside it as many preview instances of `#list-item` as fit, one row pitch apart (a row of 72 with 8 between is a pitch of 80; three lines are 128). harry places the real rows at their scrolled place; the preview rows only show the designer the list. The scrollbar is a slot of its own beside the list.
+One slot for all the rows: a frame named `#<screen>/<name>` (`#news/list`) as wide as a row (`regular` 440, `column` 490, `panel` 856 in a left or right sheet, `wide` 960) and as high as the rows it shows, with **Clip content** on. Inside it as many preview instances of `#list-item` as fit, one row pitch apart (a row of 72 with 8 between is a pitch of 80; three lines are 128). harry places the real rows at their scrolled place; the preview rows only show the designer the list. The scrollbar is a slot of its own beside the list.
 
 ## How it works
 The variant is `state` (`default`, `selected`, `disabled`), `kind` (`plain`, `icon`, `image`, `toggle`, `chevron`, `text`), `lines` (`one`, `two`, `three`) and `size`. The texts are `#list-item/title`, `#list-item/subtitle` and `#list-item/trailing-text`, the picture `#list-item/image`. Pressed is not a variant: the opacity of `#list-item/pressed`. The glyphs at the start and the end are stacks of `#icon` (`#list-item/leading/<glyph>`, `#list-item/trailing/<glyph>`), every glyph at opacity 0 but the chosen one (docs/content/icon.md). `list(...)` puts every row at its y minus the scroll and steps a fling frame by frame itself: no ticks reach the app.
