@@ -427,13 +427,21 @@ module.exports = function patch(msg, helpers) {
   const SUBHEADER_H = 48;
   // the leading text's column ("12:30 PM" in 15 px semi bold), the bar after it
   const LEAD_W = 80, ACCENT_W = 4;
+  // A leading text's headline wraps: lines two to seven, the headline all but the last line
+  // (22 each), so a long one is shown whole; the app picks the lines (ui-lib ListItem::height
+  // has the same numbers).
+  const LINES = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'], HEADLINE_LH = 22;
+  const leadLines = v => LINES.indexOf(v.lines) + 1;
   // kind text: the trailing supporting text is the row's value ("Firmware · 0.1.0"), in one line;
-  // a subheader has one line, a leading text two
-  const liCombo = v => v.kind === 'image' ? v.lines !== 'one'
+  // a subheader has one line, a leading text two to seven
+  const liCombo = v => v.kind === 'leading-text' ? leadLines(v) >= 2
+    : leadLines(v) > 3 ? false
+    : v.kind === 'image' ? v.lines !== 'one'
     : v.kind === 'text' || v.kind === 'subheader' ? v.lines === 'one'
-    : v.kind === 'leading-text' ? v.lines === 'two' : v.lines !== 'three';
-  const liSet = componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', ['one', 'two', 'three']], ['size', ['regular', 'column', 'panel', 'wide']]], 960, LI_HEIGHT.three, 24, 24, (s, v) => {
-    const op = v.state === 'disabled' ? 0.45 : 1, LI_W = LI_SIZE[v.size], LI_H = v.kind === 'subheader' ? SUBHEADER_H : LI_HEIGHT[v.lines], tall = v.lines === 'three';
+    : v.lines !== 'three';
+  const liHeight = v => v.kind === 'subheader' ? SUBHEADER_H : v.kind === 'leading-text' ? 72 + HEADLINE_LH * (leadLines(v) - 2) : LI_HEIGHT[v.lines];
+  const liSet = componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', LINES], ['size', ['regular', 'column', 'panel', 'wide']]], 960, 72 + HEADLINE_LH * 5, 24, 24, (s, v) => {
+    const op = v.state === 'disabled' ? 0.45 : 1, LI_W = LI_SIZE[v.size], LI_H = liHeight(v), tall = v.kind !== 'leading-text' && v.lines === 'three';
     s.size = { x: LI_W, y: LI_H };
     // a text longer than its lines ends in an ellipsis (harry: max lines and ellipsis of Impeller)
     const lines = n => ({ maxLines: n, textTruncation: 'ENDING' });
@@ -488,7 +496,13 @@ module.exports = function patch(msg, helpers) {
     const TT_W = 56, VALUE_W = Math.round(LI_W * 0.45);
     const trailingX = v.kind === 'text' ? LI_W - 20 - VALUE_W : v.kind === 'toggle' ? LI_W - 16 - 68 - 12 - 24 : v.kind === 'chevron' ? LI_W - 28 - 12 - 24 : v.kind === 'image' ? LI_W - 16 - TT_W : LI_W - 20 - 24;
     const textW = (v.kind === 'leading-text' ? LI_W - 20 + 12 : trailingX) - 12 - tx;
-    if (v.lines === 'one') {
+    if (v.kind === 'leading-text') {
+      // the headline over all lines but the last, the supporting text one line under it
+      const n = leadLines(v) - 1;
+      const headline = ['Living room lights', 'A headline that takes two lines in this row', 'A headline long enough to take three lines in a row of this width'][Math.min(n, 3) - 1] || 'A headline that takes every line this row has, as long as the longest the app shows whole';
+      text(s, '#list-item/title', tx, 14, textW, n * HEADLINE_LH, headline, 17, FONT.medium, C.ink, 'LEFT', 'TOP', { opacity: op, lineHeight: { value: HEADLINE_LH, units: 'PIXELS' }, ...lines(n) });
+      text(s, '#list-item/subtitle', tx, 14 + n * HEADLINE_LH + 4, textW, 20, 'On · 65 %', 14, FONT.regular, C.ink2, 'LEFT', 'TOP', { opacity: op, ...lines(1) });
+    } else if (v.lines === 'one') {
       text(s, '#list-item/title', tx, 0, textW, LI_H, 'Living room lights', 17, FONT.medium, C.ink, 'LEFT', 'CENTER', { opacity: op, ...lines(1) });
     } else if (tall) {
       text(s, '#list-item/title', tx, 16, textW, 44, 'A headline that may take two lines', 17, FONT.medium, C.ink, 'LEFT', 'TOP', { opacity: op, lineHeight: { value: 22, units: 'PIXELS' }, ...lines(2) });

@@ -25,6 +25,8 @@ USE_CASE_WORDS = {
     'news', 'article', 'music', 'song', 'playlist', 'album', 'podcast',
     # a vehicle
     'vehicle', 'parking', 'speedometer',
+    # a calendar
+    'calendar', 'agenda', 'appointment', 'meeting',
 }
 
 # what breaks the rule today: name -> what replaces it. Remove an entry with its fix.

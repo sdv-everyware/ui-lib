@@ -611,6 +611,8 @@ pub fn list<R: Row + Slotted>(slot: &str, view: &ListView<R>) -> Slot {
                 let item = item
                     .scrolled(scroll, view_h, extent)
                     .animation(animation(component.transition()));
+                // a row that takes no tap (a subheader): the touch goes to the list slot below it
+                let item = if component.takes_taps() { item } else { item.passive() };
                 component.parts(item)
             })
             .collect(),
@@ -1182,6 +1184,7 @@ mod tests {
             slot("#s", &ListRow::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00 · Europe").lines(ListItemLines::Two).size(ListItemSize::Panel)),
             slot("#s", &ListRow::new(ListItemKind::Image, "Headline", "Supporting").lines(ListItemLines::Three).size(ListItemSize::Column).image("k").trailing_text("1 h")),
             slot("#s", &ListRow::new(ListItemKind::LeadingText, "Headline", "Supporting").leading_text("8:30", "30 min").size(ListItemSize::Column)),
+            slot("#s", &ListRow::new(ListItemKind::LeadingText, "A headline of three lines", "Supporting").lines(ListItemLines::Four).size(ListItemSize::Regular)),
             slot("#s", &ListRow::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items").size(ListItemSize::Column)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::Close)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
@@ -1239,6 +1242,29 @@ mod tests {
         let path = dir.join("data/library.dcf");
         assert!(path.exists(), "{} missing; set LIBRARY_DCF", path.display());
         path
+    }
+
+    #[test]
+    fn a_row_is_as_high_as_the_code_takes_it() {
+        let sizes = crate::design::Sizes::load(dcf()).expect("library.dcf");
+        let mut rows = vec![
+            ListRow::new(ListItemKind::Subheader, "Section", "").size(ListItemSize::Column),
+            ListRow::new(ListItemKind::Plain, "A", "B"),
+            ListRow::new(ListItemKind::Image, "A", "B").lines(ListItemLines::Three),
+        ];
+        rows.extend((1..=6).map(|n| ListRow::new(ListItemKind::LeadingText, "A", "B").lines(ListItemLines::with_headline(n)).size(ListItemSize::Column)));
+        for row in rows {
+            assert_eq!(sizes.height("#list-item", &row.variant()), Some(row.height()), "{}", row.variant());
+        }
+    }
+
+    #[test]
+    fn a_subheader_in_a_list_takes_no_tap() {
+        let rows = [ListRow::new(ListItemKind::Subheader, "A", "").pitch(56.0), ListRow::new(ListItemKind::Plain, "Row", "")];
+        let out = SlotCustomizer::default().format(list("#l", &ListView::new(rows, 400.0, 80.0)));
+        let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+        let taps = |row: usize| l.items()[row].render_customization().get(&row_name("#l", row)).and_then(|c| c.is_interactive());
+        assert_eq!((taps(0), taps(1)), (Some(false), Some(true)));
     }
 
     #[test]

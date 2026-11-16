@@ -92,6 +92,11 @@ pub trait Row: Clone + Debug {
     fn pitch(&self) -> Option<f32> {
         None
     }
+    /// Whether a finger on the row taps it (pressed while down, chosen on the lift); a row that
+    /// does not (a subheader) only lets the list drag.
+    fn takes_taps(&self) -> bool {
+        true
+    }
 }
 
 impl Row for ListItem {
@@ -113,6 +118,9 @@ impl Row for ListItem {
     }
     fn pitch(&self) -> Option<f32> {
         self.pitch
+    }
+    fn takes_taps(&self) -> bool {
+        ListItem::takes_taps(self)
     }
 }
 
@@ -294,7 +302,7 @@ impl<R: Row> ListView<R> {
                 let caught = self.scroll.fling.take().is_some();
                 let moved_at = if caught { Some(now) } else { self.scroll.moved_at };
                 self.scroll = Scroll { base: y_now, fling: None, moved_at };
-                let row = if caught { None } else { row.filter(|&i| i < self.rows.len()) };
+                let row = if caught { None } else { row.filter(|&i| self.rows.get(i).is_some_and(Row::takes_taps)) };
                 self.drag = Some(Drag { y0: y, scroll0: y_now, moved: caught, row });
                 if let Some(i) = row {
                     self.rows[i].tap(gesture);
@@ -462,6 +470,24 @@ mod tests {
         assert_eq!(l.row_offset(5, now), 48.0);
         l.scroll_to(6);
         assert_eq!(l.scroll_at(now), l.max_scroll(), "no further than the content");
+    }
+
+    #[test]
+    fn a_subheader_is_never_pressed_or_chosen_but_drags_the_list() {
+        let now = Instant::now();
+        let rows = (0..12).map(|i| if i % 4 == 0 { ListItem::new(ListItemKind::Subheader, format!("head {i}"), "").pitch(56.0) } else { ListItem::new(ListItemKind::Plain, format!("row {i}"), "") });
+        let mut l = ListView::new(rows, 300.0, 80.0);
+        l.on(Some(0), Gesture::down(0.0, 10.0), now);
+        assert!(!l.rows()[0].press.pressed);
+        assert_eq!(l.on(Some(0), Gesture::up(0.0, 12.0), now), None);
+        // a drag that starts on it scrolls
+        l.on(Some(4), Gesture::down(0.0, 250.0), now);
+        l.on(None, Gesture::Move { x: 0.0, y: 150.0, inside: false }, now);
+        assert_eq!(l.scroll_at(now), 100.0 - TOUCH_SLOP);
+        l.on(None, Gesture::Up { x: 0.0, y: 150.0, inside: false, velocity: 0.0, velocity_x: 0.0 }, now);
+        // a row still is chosen
+        l.on(Some(1), Gesture::down(0.0, 100.0), now);
+        assert_eq!(l.on(Some(1), Gesture::up(0.0, 100.0), now), Some(ListEvent::Chosen(1)));
     }
 
     #[test]

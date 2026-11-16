@@ -42,11 +42,14 @@ pub enum ListItemKind {
     /// line: "Firmware · 0.1.0".
     Text,
     /// A short text of two lines before the headline (a strong line over a dim one: "8:30" over
-    /// "30 min") and a thin bar between them in a colour the code sets (`accent`); lines two.
+    /// "30 min") and a thin bar between them in a colour the code sets (`accent`); lines two to
+    /// seven: the headline takes all lines but the last, which is the supporting text's, so a
+    /// long headline is shown whole (the app counts its lines).
     LeadingText,
     /// The label of the group of rows below it, with a trailing text ("Section · 3 items"):
     /// lower than a row, no card, lines one (Material's list subheader). In a list of taller
-    /// rows it takes its own pitch (`pitch`).
+    /// rows it takes its own pitch (`pitch`). It takes no tap: a finger on it only drags the
+    /// list.
     Subheader,
 }
 
@@ -58,9 +61,51 @@ pub enum ListItemLines {
     /// Headline and one line of supporting text (72).
     #[default]
     Two,
-    /// Headline and supporting text up to two lines each (128); with an image only.
+    /// Headline and supporting text up to two lines each (128) with an image; with a leading
+    /// text, a headline of two lines and a line of supporting text (94).
     Three,
+    /// With a leading text only: a headline of three lines and a line of supporting text (116).
+    Four,
+    /// With a leading text only: a headline of four lines (138).
+    Five,
+    /// With a leading text only: a headline of five lines (160).
+    Six,
+    /// With a leading text only: a headline of six lines (182).
+    Seven,
 }
+
+impl ListItemLines {
+    /// The lines of a row whose headline takes `headline` lines and its supporting text one
+    /// (kind leading text): two to seven; a longer headline ends in an ellipsis after six.
+    pub fn with_headline(headline: usize) -> Self {
+        match headline {
+            0 | 1 => ListItemLines::Two,
+            2 => ListItemLines::Three,
+            3 => ListItemLines::Four,
+            4 => ListItemLines::Five,
+            5 => ListItemLines::Six,
+            _ => ListItemLines::Seven,
+        }
+    }
+
+    /// How many lines: 1 to 7.
+    pub fn count(self) -> usize {
+        match self {
+            ListItemLines::One => 1,
+            ListItemLines::Two => 2,
+            ListItemLines::Three => 3,
+            ListItemLines::Four => 4,
+            ListItemLines::Five => 5,
+            ListItemLines::Six => 6,
+            ListItemLines::Seven => 7,
+        }
+    }
+}
+
+/// A row of kind leading text: 72 for a headline of one line, 22 more for each further line
+/// (the design's, components-patch.js; everyware_ui_test checks it against the Library).
+const LEADING_TEXT_H: f32 = 72.0;
+const HEADLINE_LINE_H: f32 = 22.0;
 
 /// The size property of #list-item: the width of the row (a variant has a fixed size).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -163,6 +208,21 @@ impl ListItem {
         self
     }
 
+    /// How high the row is drawn (the design's variant): a list's pitch is that plus the gap.
+    pub fn height(&self) -> f32 {
+        match (self.kind, self.lines) {
+            (ListItemKind::Subheader, _) => 48.0,
+            (ListItemKind::LeadingText, lines) => LEADING_TEXT_H + HEADLINE_LINE_H * lines.count().saturating_sub(2) as f32,
+            (_, ListItemLines::Three) => 128.0,
+            _ => 72.0,
+        }
+    }
+
+    /// Whether a finger on the row taps it; a subheader only lets the list drag.
+    pub fn takes_taps(&self) -> bool {
+        self.kind != ListItemKind::Subheader
+    }
+
     /// The trailing text (kinds image, text and subheader).
     pub fn trailing_text(mut self, text: impl Into<String>) -> Self {
         self.trailing_text = text.into();
@@ -229,6 +289,10 @@ impl Component for ListItem {
             ListItemLines::One => "one",
             ListItemLines::Two => "two",
             ListItemLines::Three => "three",
+            ListItemLines::Four => "four",
+            ListItemLines::Five => "five",
+            ListItemLines::Six => "six",
+            ListItemLines::Seven => "seven",
         };
         let size = match self.size {
             ListItemSize::Regular => "regular",
@@ -275,6 +339,26 @@ mod tests {
         assert_eq!(item.variant(), "state=default, kind=leading-text, lines=two, size=column");
         assert_eq!((item.leading_title.as_str(), item.leading_subtitle.as_str(), item.accent), ("8:30", "30 min", Some(0x33b679)));
         assert_eq!(ListItem::new(ListItemKind::LeadingText, "A", "").accent, None, "the design's accent");
+    }
+
+    #[test]
+    fn a_long_headline_takes_more_lines() {
+        let row = |n| ListItem::new(ListItemKind::LeadingText, "A long headline", "Place").lines(ListItemLines::with_headline(n)).size(ListItemSize::Column);
+        assert_eq!(row(1).variant(), "state=default, kind=leading-text, lines=two, size=column");
+        assert_eq!(row(3).variant(), "state=default, kind=leading-text, lines=four, size=column");
+        assert_eq!(row(6).variant(), "state=default, kind=leading-text, lines=seven, size=column");
+        assert_eq!(row(9).lines, ListItemLines::Seven, "at most six lines of headline");
+        assert_eq!((row(0).height(), row(1).height(), row(2).height(), row(6).height()), (72.0, 72.0, 94.0, 182.0));
+        assert_eq!(ListItemLines::with_headline(4).count(), 5);
+        assert_eq!(ListItem::new(ListItemKind::Image, "A", "").lines(ListItemLines::Three).height(), 128.0);
+        assert_eq!(ListItem::new(ListItemKind::Plain, "A", "").height(), 72.0);
+    }
+
+    #[test]
+    fn a_subheader_takes_no_tap() {
+        assert!(!ListItem::new(ListItemKind::Subheader, "Section", "").takes_taps());
+        assert!(ListItem::new(ListItemKind::LeadingText, "A", "").takes_taps());
+        assert_eq!(ListItem::new(ListItemKind::Subheader, "Section", "").height(), 48.0);
     }
 
     #[test]
