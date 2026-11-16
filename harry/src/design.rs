@@ -24,12 +24,14 @@ pub fn document_file(id: &str) -> String {
 }
 
 /// Width and height of the variants of the design's component sets, by `set/variant`
-/// (`#wifi-content/step=networks`), and the frame of every `#named` node of a screen in its root
-/// frame's coordinates (the screen's pixels): where the design puts it.
+/// (`#wifi-content/step=networks`), the frame of every `#named` node of a screen in its root
+/// frame's coordinates (the screen's pixels): where the design puts it, and the frame of every
+/// `#named` node inside a variant in the variant's coordinates (a list slot in a sheet's step).
 #[derive(Clone, Debug, Default)]
 pub struct Sizes {
     variants: HashMap<String, (f32, f32)>,
     frames: HashMap<String, Frame>,
+    parts: HashMap<String, Frame>,
 }
 
 /// A node's place in its screen as the design draws it: x, y, width, height in pixels from
@@ -72,11 +74,33 @@ impl Sizes {
         let is_set = !c.children.is_empty() && c.children.iter().all(|v| v.name.contains('='));
         for child in &c.children {
             if is_set {
+                let variant = format!("{}/{}", view.name, child.name);
                 if let Ok(size) = child.style().layout_style().bounding_box() {
-                    self.variants.insert(format!("{}/{}", view.name, child.name), (size.width, size.height));
+                    self.variants.insert(variant.clone(), (size.width, size.height));
+                }
+                if let Some(b) = child.design_absolute_bounding_box.as_ref() {
+                    self.parts_of(&variant, child, (b.x.unwrap_or(0.0), b.y.unwrap_or(0.0)));
                 }
             }
             self.collect(child);
+        }
+    }
+
+    /// The frames of a variant's #named nodes, by `set/variant/name`, from the variant's top left.
+    fn parts_of(&mut self, variant: &str, view: &View, origin: (f32, f32)) {
+        let Some(View_data_type::Container(c)) = view.data.as_ref().and_then(|d| d.view_data_type.as_ref()) else {
+            return;
+        };
+        for child in &c.children {
+            if let (true, Some(b)) = (child.name.starts_with('#'), child.design_absolute_bounding_box.as_ref()) {
+                self.parts.entry(format!("{variant}/{}", child.name)).or_insert(Frame {
+                    x: b.x.unwrap_or(0.0) - origin.0,
+                    y: b.y.unwrap_or(0.0) - origin.1,
+                    width: b.width.unwrap_or(0.0),
+                    height: b.height.unwrap_or(0.0),
+                });
+            }
+            self.parts_of(variant, child, origin);
         }
     }
 
@@ -108,6 +132,12 @@ impl Sizes {
     /// component in it), if the design has the node.
     pub fn frame(&self, name: &str) -> Option<Frame> {
         self.frames.get(name).copied()
+    }
+
+    /// Where the variant `variant` of the set `set` puts its node `name` (a list slot in a
+    /// sheet's step), from the variant's top left, if the design has it.
+    pub fn part(&self, set: &str, variant: &str, name: &str) -> Option<Frame> {
+        self.parts.get(&format!("{set}/{variant}/{name}")).copied()
     }
 
     /// The size of a variant of a set, if the design has it.
@@ -175,5 +205,15 @@ mod tests {
         assert!(f.x >= 0.0 && f.y >= 0.0, "inside the Library frame: {f:?}");
         assert!(f.width >= regular_width && f.height > 0.0, "holds its variants: {f:?}, regular {regular_width}");
         assert_eq!(sizes.frame("#nothing"), None);
+    }
+
+    #[test]
+    fn a_part_has_its_place_in_its_variant() {
+        let sizes = Sizes::load(dcf()).expect("library.dcf");
+        // the scrollbar's thumb: at the top left of the variant, as wide as it
+        let thumb = sizes.part("#scrollbar", "state=default", "#scrollbar/thumb").expect("#scrollbar/thumb");
+        let (width, _) = sizes.variant("#scrollbar", "state=default").expect("#scrollbar");
+        assert_eq!((thumb.x, thumb.y, thumb.width), (0.0, 0.0, width));
+        assert_eq!(sizes.part("#scrollbar", "state=default", "#nothing"), None);
     }
 }

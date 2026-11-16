@@ -71,6 +71,21 @@ const CLONE_MARK: &str = "@$List-";
 /// A sweeping part (a skeleton's shimmer) moves this often: 30 frames a second, not every
 /// frame, because each frame redraws the whole screen.
 const SWEEP_FRAME: Duration = Duration::from_millis(33);
+/// The Library's #scrollbar: as high as the screen, the thumb this high (components-patch.js
+/// SB_MAX, SB_THUMB; the contract test checks the height against library.dcf).
+pub const SCROLLBAR_MAX: f32 = 1080.0;
+pub const SCROLLBAR_THUMB: f32 = 48.0;
+
+/// The thumb's meter (0..100 along the whole component) for a list `view_h` high scrolled to
+/// `scroll` of `max`: the component's bottom is the list's bottom, the track the lowest
+/// `view_h` of it, and the thumb runs from the track's top to its bottom.
+fn thumb_meter(scroll: f32, max: f32, view_h: f32) -> f32 {
+    let along = if max > 0.0 { (scroll / max).clamp(0.0, 1.0) } else { 0.0 };
+    let top = SCROLLBAR_MAX - view_h.min(SCROLLBAR_MAX);
+    let y = top + along * (view_h.min(SCROLLBAR_MAX) - SCROLLBAR_THUMB).max(0.0);
+    // a list lower than the thumb: the thumb at the component's bottom, not past it
+    (y / (SCROLLBAR_MAX - SCROLLBAR_THUMB) * 100.0).clamp(0.0, 100.0)
+}
 
 /// A UI model field for a slot: a list with the slot's component.
 pub type Slot = List<ComponentItem>;
@@ -422,8 +437,8 @@ impl Customizer<Slot> for SlotCustomizer {
                     c.set_opacity(root.clone(), if on { 1.0 } else { 0.0 });
                 }
                 if let Some((node, max, shown)) = &scrollbar {
-                    let y = scroll.map_or(0.0, |(s, _)| s);
-                    c.set_meter_value(node.clone(), if *max > 0.0 { (y / max * 100.0).clamp(0.0, 100.0) } else { 0.0 });
+                    let (y, view_h) = scroll.unwrap_or((0.0, 0.0));
+                    c.set_meter_value(node.clone(), thumb_meter(y, *max, view_h));
                     let target = if *shown { 100.0 } else { 0.0 };
                     let fade = (!*shown).then(|| transitions::transition(ComponentKind::Scrollbar, Change::Hide)).flatten();
                     let (v, m) = self.step(format!("{}/opacity/{root}", item.id), &Meter::new(target, fade), now);
@@ -588,12 +603,20 @@ pub fn list<R: Row + Slotted>(slot: &str, view: &ListView<R>) -> Slot {
 }
 
 /// The slot field's value for the scrollbar of `view` in the slot frame `slot`: the
-/// library's `#scrollbar` of the list's length, its thumb at the scroll, shown while the
-/// content moves and SCROLLBAR_DELAY after.
+/// library's `#scrollbar` with its bottom at the list's bottom, the track as high as the list,
+/// its thumb at the scroll, shown while the content moves and SCROLLBAR_DELAY after.
 pub fn scrollbar(slot: &str, view: &ListView) -> Slot {
-    let item = ComponentItem::new(slot, "#scrollbar", format!("length={}", view.view_h() as i32))
+    let view_h = view.view_h().min(SCROLLBAR_MAX);
+    // passive: the clone reaches far above its slot (harry hits by bounds, without clipping)
+    let item = ComponentItem::new(slot, "#scrollbar", "state=default".to_string())
+        .passive()
+        .meter("#scrollbar/track", Meter::new(view_h / SCROLLBAR_MAX * 100.0, None))
         .scrolled(view.scroll(), view.view_h());
-    List::new(vec![ComponentItem { thumb: Some(("#scrollbar/thumb".to_string(), view.max_scroll())), ..item }])
+    List::new(vec![ComponentItem {
+        thumb: Some(("#scrollbar/thumb".to_string(), view.max_scroll())),
+        position: (0.0, view_h - SCROLLBAR_MAX),
+        ..item
+    }])
 }
 
 /// The pressed look of a component: its pressed layer fades in and out (display-only), the
@@ -1034,6 +1057,29 @@ mod tests {
         let path = dir.join("data/library.dcf");
         assert!(path.exists(), "{} missing; set LIBRARY_DCF", path.display());
         path
+    }
+
+    #[test]
+    fn the_scrollbar_is_as_high_as_the_code_takes_it() {
+        let sizes = crate::design::Sizes::load(dcf()).expect("library.dcf");
+        assert_eq!(sizes.height("#scrollbar", "state=default"), Some(SCROLLBAR_MAX));
+    }
+
+    #[test]
+    fn the_thumb_runs_along_the_list_s_part_of_the_scrollbar() {
+        let at = |y: f32| y / (SCROLLBAR_MAX - SCROLLBAR_THUMB) * 100.0;
+        // a list 472 high: the track is the lowest 472 px, the thumb at its top, then its bottom
+        assert_eq!(thumb_meter(0.0, 400.0, 472.0), at(SCROLLBAR_MAX - 472.0));
+        assert_eq!(thumb_meter(400.0, 400.0, 472.0), at(SCROLLBAR_MAX - SCROLLBAR_THUMB));
+        // nothing to scroll: the thumb stays at the top
+        assert_eq!(thumb_meter(0.0, 0.0, 472.0), at(SCROLLBAR_MAX - 472.0));
+        // a list as high as the screen: the whole component
+        assert_eq!(thumb_meter(0.0, 100.0, SCROLLBAR_MAX), 0.0);
+        assert_eq!(scrollbar("#s", &ListView::new([], 472.0, 80.0)).items()[0].position, (0.0, 472.0 - SCROLLBAR_MAX));
+        // no list (a design without the slot): the thumb stays on the component
+        assert_eq!(thumb_meter(0.0, 0.0, 0.0), 100.0);
+        // the clone reaches above its slot: it takes no taps
+        assert!(!scrollbar("#s", &ListView::new([], 472.0, 80.0)).items()[0].taps);
     }
 
     #[test]

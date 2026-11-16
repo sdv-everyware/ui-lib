@@ -226,6 +226,19 @@ impl<R: Row> ListView<R> {
         if max <= 0.0 { 0.0 } else { self.scroll_at(now) / max * 100.0 }
     }
 
+    /// Scrolls so that row `row` is at the top, or as near the top as the content lets it
+    /// (RecyclerView.scrollToPosition): at once, a drag or fling in progress ends, the row under
+    /// a finger is no longer pressed.
+    pub fn scroll_to(&mut self, row: usize) {
+        if let Some(i) = self.drag.take().and_then(|d| d.row) {
+            if let Some(r) = self.rows.get_mut(i) {
+                r.tap(Gesture::Cancel);
+            }
+        }
+        let base = (row as f32 * self.pitch).min(self.max_scroll());
+        self.scroll = Scroll { base, fling: None, moved_at: None };
+    }
+
     /// The selected row.
     pub fn selected(&self) -> Option<usize> {
         self.rows.iter().position(|r| r.is_selected())
@@ -327,6 +340,22 @@ mod tests {
         assert_eq!(l.content_h(), 12.0 * 72.0);
         assert_eq!(l.max_scroll(), 12.0 * 72.0 - 424.0);
         assert_eq!(list(3).max_scroll(), 0.0);
+    }
+
+    #[test]
+    fn scroll_to_puts_the_row_at_the_top_within_the_content() {
+        let now = Instant::now();
+        let mut l = list(12);
+        l.scroll_to(3);
+        assert_eq!(l.scroll_at(now), 3.0 * 72.0);
+        // the last rows: no further than the content goes
+        l.scroll_to(11);
+        assert_eq!(l.scroll_at(now), l.max_scroll());
+        // a finger on a row: the row is no longer pressed
+        l.on(Some(2), Gesture::down(0.0, 300.0), now);
+        assert!(l.rows()[2].press.pressed);
+        l.scroll_to(0);
+        assert!(!l.rows()[2].press.pressed);
     }
 
     #[test]

@@ -393,16 +393,19 @@ module.exports = function patch(msg, helpers) {
     }
   }, { rows: true });
 
-  // ---- Scrollbar: the thumb of a scrolling list, a vertical progress marker along the
-  // list's height (one `length` value per list height in the design); the code shows it
-  // while the content moves and fades it 300 ms after (components.json hide).
+  // ---- Scrollbar: one component for a list of any height, as Android draws a View's
+  // scrollbar from the list's extent (View.onDrawScrollBars). It is as high as the screen;
+  // the code sets the track (a vertical progress bar: it grows from the bottom) to the list's
+  // height and moves the thumb (a vertical progress marker) along it, and puts the clone with
+  // its bottom at the list's bottom (ui-lib slot.rs scrollbar(); an app's slot: fig-helpers
+  // scrollbarSlot). The code shows it while the content moves and fades it 300 ms after
+  // (components.json hide). SB_MAX and SB_THUMB are the code's too (slot.rs).
   heading(2200, 1000, 'Scrollbar');
-  const SB_W = 6, SB_THUMB = 48;
-  componentSet(lib, '#scrollbar', 2200, 1000, [['length', ['472', '744']]], SB_W, 744, 24, 24, (s, v) => {
-    const L = Number(v.length);
-    s.size = { x: SB_W, y: L };
-    rect(s, 'track', 0, 0, SB_W, L, C.line, SB_W / 2, { opacity: 0.5 });
-    meter(rect(s, '#scrollbar/thumb', 0, 0, SB_W, SB_THUMB, C.ink2, SB_W / 2), 'progressMarkerData', { vertical: true, startY: 0, endY: L - SB_THUMB });
+  const SB_W = 6, SB_THUMB = 48, SB_MAX = 1080;
+  componentSet(lib, '#scrollbar', 2200, 1000, [['state', ['default']]], SB_W, SB_MAX, 24, 24, (s) => {
+    s.size = { x: SB_W, y: SB_MAX };
+    meter(rect(s, '#scrollbar/track', 0, 0, SB_W, SB_MAX, C.line, SB_W / 2, { opacity: 0.5 }), 'progressBarData', { vertical: true, endY: SB_MAX });
+    meter(rect(s, '#scrollbar/thumb', 0, 0, SB_W, SB_THUMB, C.ink2, SB_W / 2), 'progressMarkerData', { vertical: true, startY: 0, endY: SB_MAX - SB_THUMB });
   }, { cols: 1 });
 
   // 90 variants: on their own below the transitions table, not over the other sets
@@ -413,12 +416,13 @@ module.exports = function patch(msg, helpers) {
   // the trailing supporting text alone: a value on the right of its label). lines: one
   // (headline only), two (headline and one line of supporting text), three (a tall row:
   // headline and supporting text up to two lines each, the image as a thumbnail). size: the
-  // width (regular 440: a card's column; column 490: a dashboard column; wide 960: a sheet).
-  const LI_SIZE = { regular: 440, column: 490, wide: 960 }, LI_HEIGHT = { one: 72, two: 72, three: 128 };
+  // width (regular 440: a card's column; column 490: a dashboard column; panel 856: the content
+  // of a left or right #sheet beside a scrollbar; wide 960: a dialog sheet).
+  const LI_SIZE = { regular: 440, column: 490, panel: 856, wide: 960 }, LI_HEIGHT = { one: 72, two: 72, three: 128 };
   const LI_KINDS = ['plain', 'icon', 'image', 'toggle', 'chevron', 'text'];
   // kind text: the trailing supporting text is the row's value ("Firmware · 0.1.0"), in one line
   const liCombo = v => v.kind === 'image' ? v.lines !== 'one' : v.kind === 'text' ? v.lines === 'one' : v.lines !== 'three';
-  componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', ['one', 'two', 'three']], ['size', ['regular', 'column', 'wide']]], 960, LI_HEIGHT.three, 24, 24, (s, v) => {
+  componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', ['one', 'two', 'three']], ['size', ['regular', 'column', 'panel', 'wide']]], 960, LI_HEIGHT.three, 24, 24, (s, v) => {
     const op = v.state === 'disabled' ? 0.45 : 1, LI_W = LI_SIZE[v.size], LI_H = LI_HEIGHT[v.lines], tall = v.lines === 'three';
     s.size = { x: LI_W, y: LI_H };
     const bg = v.state === 'selected' ? C.accentSoft : C.white;
@@ -602,7 +606,7 @@ module.exports = function patch(msg, helpers) {
   g('#list-item', 'state=default, kind=image, lines=three, size=regular', '#ui/list-item-image', 1380, 160);
 
   ICON_GLYPHS.forEach((name, i) => g('#icon', `icon=${name}`, `#ui/icon-${name}`, 80 + i * 40, 1000));
-  g('#scrollbar', 'length=472', '#ui/scrollbar', 1860, 160);
+  g('#scrollbar', 'state=default', '#ui/scrollbar', 1860, 0);
 
   g('#bar-chart', 'bars=24', '#ui/bar-chart', 960, 900);
   // A variant of a set defined above, by its name ("prop=value, prop=value").
