@@ -38,7 +38,7 @@ use everyware_ui_core::button::{Button, IconButton};
 use everyware_ui_core::dropdown::Dropdown;
 use everyware_ui_core::input_field::{caret_phase_on, InputField, BLINK_MS};
 use everyware_ui_core::keyboard::Keyboard;
-use everyware_ui_core::list_item::{ListItem as ListRow, GLYPHS};
+use everyware_ui_core::list_item::{ListItem as ListRow, ListItemKind, ListItemLines, GLYPHS};
 use everyware_ui_core::list_view::Row;
 use everyware_ui_core::list_view::{ListView, Scroll};
 use everyware_ui_core::radio::Radio;
@@ -144,6 +144,9 @@ pub struct ComponentItem {
     /// A scrolling list: the content's scroll, subtracted from the row's y frame by frame
     /// (a fling steps here, not in the app), and the slot's height for the hit test.
     scroll: Option<(Scroll, f32)>,
+    /// A row of a scrolling list: how much of the list it takes (the row pitch). A row that
+    /// is out of the slot is not drawn (opacity 0: harry skips its subtree).
+    extent: f32,
     component: &'static str,
     variant: String,
     animation: AnimationOverride,
@@ -182,6 +185,7 @@ impl ComponentItem {
             position: (0.0, 0.0),
             horizontal: false,
             scroll: None,
+            extent: 0.0,
             component,
             variant,
             animation: AnimationOverride::DisableAnimation,
@@ -310,9 +314,11 @@ impl ComponentItem {
         self
     }
 
-    /// A row of a scrolling list: `scroll` moves it, `view_h` is the slot's height.
-    fn scrolled(mut self, scroll: Scroll, view_h: f32) -> Self {
+    /// A row of a scrolling list: `scroll` moves it, `view_h` is the slot's height, `pitch`
+    /// what the row takes of the list.
+    fn scrolled(mut self, scroll: Scroll, view_h: f32, pitch: f32) -> Self {
         self.scroll = Some((scroll, view_h));
+        self.extent = pitch;
         self
     }
 }
@@ -433,8 +439,13 @@ impl Customizer<Slot> for SlotCustomizer {
                 // takes no taps.
                 let shown = item.thumb.is_some() || scroll.map_or(true, |(_, view_h)| y > -ROW_SLACK && y < view_h);
                 c.set_interactive(root.clone(), shown && item.taps && item.shown != Some(false));
-                if let Some(on) = item.shown {
-                    c.set_opacity(root.clone(), if on { 1.0 } else { 0.0 });
+                // A row out of its slot is not drawn: at opacity 0 harry skips its subtree, in
+                // its own passes and in the display list. Most rows of a long list are out.
+                let in_view = item.thumb.is_some() || scroll.map_or(true, |(_, view_h)| y + item.extent > 0.0 && y < view_h);
+                match (in_view, item.shown) {
+                    (false, _) => c.set_opacity(root.clone(), 0.0),
+                    (true, Some(on)) => c.set_opacity(root.clone(), if on { 1.0 } else { 0.0 }),
+                    (true, None) => {}
                 }
                 if let Some((node, max, shown)) = &scrollbar {
                     let (y, view_h) = scroll.unwrap_or((0.0, 0.0));
@@ -594,7 +605,7 @@ pub fn list<R: Row + Slotted>(slot: &str, view: &ListView<R>) -> Slot {
                     item.row(row, row as f32 * pitch)
                 };
                 let item = item
-                    .scrolled(scroll, view_h)
+                    .scrolled(scroll, view_h, pitch)
                     .animation(animation(component.transition()));
                 component.parts(item)
             })
@@ -611,7 +622,7 @@ pub fn scrollbar(slot: &str, view: &ListView) -> Slot {
     let item = ComponentItem::new(slot, "#scrollbar", "state=default".to_string())
         .passive()
         .meter("#scrollbar/track", Meter::new(view_h / SCROLLBAR_MAX * 100.0, None))
-        .scrolled(view.scroll(), view.view_h());
+        .scrolled(view.scroll(), view.view_h(), 0.0);
     List::new(vec![ComponentItem {
         thumb: Some(("#scrollbar/thumb".to_string(), view.max_scroll())),
         position: (0.0, view_h - SCROLLBAR_MAX),
@@ -656,26 +667,45 @@ impl Slotted for Radio {
 
 impl Slotted for ListRow {
     const SET: &'static str = "#list-item";
-    /// Title, subtitle, the pressed layer, and the two icon slots: every glyph of the stack
-    /// at opacity 0 but the chosen one (display-only; a variant cannot change inside an item).
-    /// With an image: the picture (a registered image; an unknown key keeps the placeholder) and
-    /// the trailing text. The subtitle is not in lines one, the image parts only in kind image.
+    /// Title, subtitle, the pressed layer, the two icon slots, and with an image the picture
+    /// (a registered image; an unknown key keeps the placeholder) and the trailing text. A row
+    /// names only the parts its kind and lines have: every part costs on every frame (a text,
+    /// a meter, a name), in every row, also in the rows nobody sees.
+    ///
+    /// An icon slot is a stack of every glyph at opacity 0 (display-only; a variant cannot
+    /// change inside an item): with a glyph, that one is lit; with none, the whole stack is
+    /// off by one part (its frame), so harry skips it.
     fn parts(&self, item: ComponentItem) -> ComponentItem {
-        let mut item = item
-            .text("#list-item/title", self.title.clone())
-            .text("#list-item/subtitle", self.subtitle.clone())
-            .optional("#list-item/subtitle")
-            .text("#list-item/trailing-text", self.trailing_text.clone())
-            .optional("#list-item/trailing-text")
-            .optional("#list-item/image");
-        if let Some(image) = self.image.as_deref().and_then(crate::images::get) {
-            item = item.image("#list-item/image", image);
+        let mut item = item.text("#list-item/title", self.title.clone());
+        if self.lines != ListItemLines::One {
+            item = item.text("#list-item/subtitle", self.subtitle.clone()).optional("#list-item/subtitle");
         }
-        for (slot, chosen) in [("leading", self.leading), ("trailing", self.trailing)] {
-            for glyph in GLYPHS {
-                let node = format!("#list-item/{slot}/{glyph}");
-                let on = if chosen == Some(glyph) { 100.0 } else { 0.0 };
-                item = item.opacity(node.clone(), Meter::new(on, None)).optional(node);
+        if matches!(self.kind, ListItemKind::Image | ListItemKind::Text) {
+            item = item.text("#list-item/trailing-text", self.trailing_text.clone()).optional("#list-item/trailing-text");
+        }
+        if self.kind == ListItemKind::Image {
+            item = item.optional("#list-item/image");
+            if let Some(image) = self.image.as_deref().and_then(crate::images::get) {
+                item = item.image("#list-item/image", image);
+            }
+        }
+        let stacks = [
+            ("#list-item/leading", self.leading, self.kind == ListItemKind::Icon),
+            ("#list-item/trailing", self.trailing, matches!(self.kind, ListItemKind::Plain | ListItemKind::Icon)),
+        ];
+        for (stack, chosen, has) in stacks {
+            if !has {
+                continue;
+            }
+            match chosen.filter(|glyph| GLYPHS.contains(glyph)) {
+                None => item = item.opacity(stack, Meter::new(0.0, None)).optional(stack),
+                Some(chosen) => {
+                    for glyph in GLYPHS {
+                        let node = format!("{stack}/{glyph}");
+                        let on = if glyph == chosen { 100.0 } else { 0.0 };
+                        item = item.opacity(node.clone(), Meter::new(on, None)).optional(node);
+                    }
+                }
             }
         }
         pressed(item, "#list-item/pressed", &self.press, Self::KIND)
@@ -911,7 +941,12 @@ mod tests {
         assert_eq!(c.format(slot("#t", &toggle)).update_policy, UpdatePolicy::Finished, "first value at once");
         toggle.set(true);
         assert_eq!(c.format(slot("#t", &toggle)).update_policy, UpdatePolicy::NextFrame);
-        sleep(Duration::from_millis(260)); // the value transition is 200 ms
+        // the value transition is 200 ms: frame by frame, as a screen (a frame that comes
+        // late holds the animation, Follow's LATE)
+        for _ in 0..13 {
+            sleep(Duration::from_millis(20));
+            c.format(slot("#t", &toggle));
+        }
         let done = c.format(slot("#t", &toggle));
         assert_eq!(done.update_policy, UpdatePolicy::Finished);
         assert_eq!(item_of(&done).get("#toggle/thumb").and_then(|c| c.get_meter_value()), Some(100.0));
@@ -958,6 +993,93 @@ mod tests {
         assert_eq!(item_of(&out).get(&clone_name("#f")).unwrap().get_opacity(), None, "a plain slot keeps the design's opacity");
     }
 
+    /// The opacity the code sets on row `row` of a formatted list (None: the design's).
+    fn row_opacity(output: &CustomizerOutput, slot: &str, row: usize) -> Option<f32> {
+        let RenderCustomization::ListCustomization(list) = &output.result else {
+            panic!("a list formats to a list customization")
+        };
+        list.items()[row].render_customization().get(&row_name(slot, row)).and_then(|c| c.get_opacity())
+    }
+
+    #[test]
+    fn a_row_out_of_its_slot_is_not_drawn_and_a_row_partly_in_is() {
+        // 10 rows 80 apart in a slot 200 high
+        let rows = (0..10).map(|i| ListRow::new(ListItemKind::Plain, format!("Row {i}"), ""));
+        let mut view = ListView::new(rows, 200.0, 80.0);
+        let opacities = |view: &ListView<ListRow>| {
+            let out = SlotCustomizer::default().format(list("#l", view));
+            (0..10).map(|row| row_opacity(&out, "#l", row)).collect::<Vec<_>>()
+        };
+        // rows 0 and 1 in, row 2 at 160 partly in (its bottom at 240), row 3 at 240 out
+        let at_top = opacities(&view);
+        assert_eq!(at_top[..3], [None, None, None], "rows in the slot keep the design's opacity");
+        assert!(at_top[3..].iter().all(|o| *o == Some(0.0)), "rows below the slot: {at_top:?}");
+        // scrolled by one row: row 0 at -80 ends where the slot starts, out
+        view.scroll_to(1);
+        let one_down = opacities(&view);
+        assert_eq!((one_down[0], one_down[1], one_down[3], one_down[4]), (Some(0.0), None, None, Some(0.0)));
+        // at the end (scroll 600): row 7 at -40 is partly in, row 6 at -120 out
+        view.scroll_to(9);
+        let at_end = opacities(&view);
+        assert_eq!((at_end[6], at_end[7], at_end[9]), (Some(0.0), None, None));
+    }
+
+    /// Every part name the code sets on a list row, optional or not.
+    fn row_parts(row: &ListRow) -> Vec<String> {
+        let item = slot("#r", row).items()[0].clone();
+        item.part_names().into_iter().chain(item.optional_part_names()).map(String::from).collect()
+    }
+
+    #[test]
+    fn a_row_names_only_the_parts_its_kind_and_lines_have() {
+        let glyphs_of = |parts: &[String], stack: &str| parts.iter().filter(|p| p.starts_with(&format!("{stack}/"))).count();
+        let has = |parts: &[String], part: &str| parts.iter().any(|p| p == part);
+
+        let plain = row_parts(&ListRow::new(ListItemKind::Plain, "Amsterdam", "").lines(ListItemLines::One));
+        assert!(has(&plain, "#list-item/title") && has(&plain, "#list-item/pressed"));
+        for part in ["#list-item/subtitle", "#list-item/trailing-text", "#list-item/image", "#list-item/leading"] {
+            assert!(!has(&plain, part), "plain, one line: {part} in {plain:?}");
+        }
+        assert!(has(&plain, "#list-item/trailing"), "no glyph: the trailing stack is off as a whole");
+        assert_eq!((glyphs_of(&plain, "#list-item/leading"), glyphs_of(&plain, "#list-item/trailing")), (0, 0));
+
+        let two = row_parts(&ListRow::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00 · Europe").lines(ListItemLines::Two));
+        assert!(has(&two, "#list-item/subtitle"));
+
+        let icon = row_parts(&ListRow::new(ListItemKind::Icon, "Home", "").leading("wifi").trailing(Some("lock")));
+        assert_eq!((glyphs_of(&icon, "#list-item/leading"), glyphs_of(&icon, "#list-item/trailing")), (GLYPHS.len(), GLYPHS.len()));
+        assert!(!has(&icon, "#list-item/leading") && !has(&icon, "#list-item/trailing"), "a stack with a glyph is not switched off");
+        assert!(!has(&icon, "#list-item/trailing-text") && !has(&icon, "#list-item/image"));
+
+        let text = row_parts(&ListRow::new(ListItemKind::Text, "Firmware", "").lines(ListItemLines::One).trailing_text("0.1.0"));
+        assert!(has(&text, "#list-item/trailing-text") && !has(&text, "#list-item/image"));
+        assert_eq!(glyphs_of(&text, "#list-item/leading") + glyphs_of(&text, "#list-item/trailing"), 0);
+        assert!(!has(&text, "#list-item/leading") && !has(&text, "#list-item/trailing"));
+
+        let image = row_parts(&ListRow::new(ListItemKind::Image, "Headline", "Supporting").lines(ListItemLines::Three).image("k").trailing_text("1 h"));
+        for part in ["#list-item/image", "#list-item/trailing-text", "#list-item/subtitle"] {
+            assert!(has(&image, part), "image, three lines: {part} missing in {image:?}");
+        }
+        assert!(!has(&image, "#list-item/leading") && !has(&image, "#list-item/trailing"));
+
+        for kind in [ListItemKind::Toggle, ListItemKind::Chevron] {
+            let parts = row_parts(&ListRow::new(kind, "Title", "").lines(ListItemLines::One));
+            assert!(parts.iter().all(|p| !p.starts_with("#list-item/leading") && !p.starts_with("#list-item/trailing") && p != "#list-item/image"), "{kind:?}: {parts:?}");
+        }
+    }
+
+    #[test]
+    fn a_stack_without_a_glyph_is_off_as_a_whole() {
+        let row = ListRow::new(ListItemKind::Icon, "Home", "").leading("wifi");
+        let out = SlotCustomizer::default().format(slot("#r", &row));
+        let opacity = |node: &str| item_of(&out).get(node).and_then(|c| c.get_opacity());
+        assert_eq!(opacity("#list-item/trailing"), Some(0.0), "no trailing glyph: the stack is off");
+        assert_eq!(opacity("#list-item/trailing/lock"), None, "and its glyphs are not named");
+        assert_eq!(opacity("#list-item/leading/wifi"), Some(1.0));
+        assert_eq!(opacity("#list-item/leading/lock"), Some(0.0));
+        assert_eq!(opacity("#list-item/leading"), None, "a stack with a glyph keeps the design's opacity");
+    }
+
     #[test]
     fn a_grid_lays_its_cells_out_in_rows_and_taps_come_by_index() {
         let buttons: Vec<Button> = (0..6).map(|_| Button::new(ButtonKind::Secondary, "")).collect();
@@ -1001,6 +1123,9 @@ mod tests {
             slot("#s", &RadioGroup::new(["One"]).options[0].clone()),
             slot("#s", &ListRow::new(ListItemKind::Icon, "Title", "Subtitle").leading("wifi").trailing(Some("lock"))),
             slot("#s", &ListRow::new(ListItemKind::Text, "Firmware", "").lines(ListItemLines::One).size(ListItemSize::Column).trailing_text("0.1.0")),
+            // a row without a glyph: its trailing stack is off as a whole, by its frame
+            slot("#s", &ListRow::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00 · Europe").lines(ListItemLines::Two).size(ListItemSize::Panel)),
+            slot("#s", &ListRow::new(ListItemKind::Image, "Headline", "Supporting").lines(ListItemLines::Three).size(ListItemSize::Column).image("k").trailing_text("1 h")),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::Close)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
             slot("#s", &Segmented::new(["Low", "Med", "High"])),
