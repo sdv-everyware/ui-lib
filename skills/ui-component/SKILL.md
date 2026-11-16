@@ -276,8 +276,8 @@ by accident.
 
 | Layer | What |
 |-------|------|
-| components.json | `list_item` with `size` (regular 440, column 490, wide 960), `lines`, and the two icon slots; `icon` (the glyphs); `scrollbar` (`length` per list height, transition `hide`) |
-| Figma (components-patch.js) | `#list-item`: `#list-item/leading` and `/trailing` are **glyph stacks**: every glyph of `#icon` as an instance `#list-item/<slot>/<glyph>` at opacity 0; `#scrollbar`: a track and `#scrollbar/thumb`, a vertical progress marker 0..length-48 |
+| components.json | `list_item` with `size` (regular 440, column 490, panel 856 in a side sheet, wide 960), `lines`, and the two icon slots; `icon` (the glyphs); `scrollbar` (one variant for a list of any height, transition `hide`) |
+| Figma (components-patch.js) | `#list-item`: `#list-item/leading` and `/trailing` are **glyph stacks**: every glyph of `#icon` as an instance `#list-item/<slot>/<glyph>` at opacity 0; `#scrollbar`: drawn as high as the screen, `#scrollbar/track` a vertical progress bar the code sets to the list's height (it grows from the bottom) and `#scrollbar/thumb` a vertical progress marker along it |
 | Figma (the app's design) | the list slot is a frame that **clips** (`frameMaskDisabled: false`) with preview rows; the scrollbar slot next to it, as high as the list |
 | core | `list_view.rs`: `ListView` with Android's touch handling from `scroller.rs` (touch slop 8, VelocityTracker LSQ2, OverScroller spline fling, a press catches a fling); `ListItem::leading/trailing(glyph)`; `Scroll { base, fling, moved_at }` and `scrollbar_shown()` |
 | harry (slot.rs) | `list(slot, &view)`: one `ComponentItem` per row at `row * pitch`, the scroll subtracted **per frame in the customizer** (a fling steps there, the app gets no ticks), rows out of the slot not interactive (harry hits by bounds, no clipping); `scrollbar(slot, &view)`: the thumb meter and the fade from `Scroll`; glyphs by `.opacity(...).optional(...)` (optional: not every kind has the slot) |

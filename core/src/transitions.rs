@@ -54,6 +54,8 @@ pub enum ComponentKind {
     Tile,
     /// #tabs: the screen's navigation, one tab per screen
     Tabs,
+    /// pages that take turns in one place without tabs (screens.rs, Pages)
+    Pages,
 }
 
 /// A change of state that may be animated.
@@ -167,6 +169,7 @@ mod tests {
         assert_eq!(transition(ComponentKind::Toggle, Change::Disable), None);
         let t = transition(ComponentKind::Tabs, Change::Switch).unwrap();
         assert_eq!((t.duration.as_millis(), t.easing, t.delay), (300, Easing::EaseOut, Duration::ZERO));
+        assert_eq!(transition(ComponentKind::Pages, Change::Switch), Some(t), "pages switch as the tabs' screens");
     }
 
     #[test]

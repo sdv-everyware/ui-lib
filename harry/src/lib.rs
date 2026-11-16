@@ -210,7 +210,8 @@ pub struct ScreenView {
 
 impl ScreenView {
     /// The view of a screen from its target; `design_x` is where the design puts the screen in
-    /// its parent (Sizes::frame), the offset of a slide is added to it.
+    /// its parent, the offset of a slide is added to it: Sizes::frame for a screen right under
+    /// the root, Sizes::part for a page in a component (docs/content/pages.md).
     pub fn new(target: everyware_ui_core::screens::ScreenTarget, design_x: f32) -> Self {
         ScreenView {
             opacity: Meter::new(target.opacity, target.opacity_transition),

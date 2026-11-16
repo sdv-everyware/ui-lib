@@ -35,6 +35,7 @@ This file is the entry for a program. Everything it points to is a source: nothi
 - #icon: A 24 px glyph (Lucide) for the slots of other components; display only, no state. (docs/content/icon.md, example docs/examples/icon.rs)
 - #segmented: One choice of two to four, Material 3's segmented button: the segments are tap targets, the selected one is lit by opacity. (docs/content/segmented.md, example docs/examples/segmented.rs)
 - #tabs: The screen's navigation, Material 3's tabs: the chosen tab is lit by opacity, a tap switches the screen with the screens' effect. (docs/content/tabs.md, example docs/examples/tabs.rs)
+- Pages (code): Pages that take turns in one place without tabs: one page deeper slides in, Back slides it out, with the screens' effect. (docs/content/pages.md, example docs/examples/pages.rs)
 - #tile: A device's card, Material 3's card for a smart home device: a symbol, a title, a subtitle, a value and the device's control; a tap on the card opens the device, the control inside changes it. (docs/content/tile.md, example docs/examples/tile.rs)
 - #skeleton: a placeholder while content loads (Material's skeleton loader): grey shapes where the content will be, a heading bar, four text lines or a 16:9 picture, 440 or 832 wide (wide: a side panel's 880 content less 24 on each side) (docs/content/skeleton.md, example docs/examples/skeleton.rs)
 - #symbol: The tile of a room's or a device's symbol: 48 px, the soft accent background, one glyph in ink; display only. (docs/content/symbol.md, example docs/examples/symbol.rs)

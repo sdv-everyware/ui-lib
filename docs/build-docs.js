@@ -359,7 +359,7 @@ const PLAY = `
       if (eventEl) eventEl.textContent = i <= 1 ? 'Gesture::Down … Gesture::Up { inside: true } → ' + (b.event ? 'Some(' + b.event + ')' : 'the component changes') : '';
       run(i, true);
     }));
-    if (b.kind !== 'display' && b.kind !== 'sheet') {
+    if (b.kind !== 'display' && b.kind !== 'sheet' && b.kind !== 'code') {
       hero.addEventListener('pointerdown', e => { e.preventDefault(); down(); });
       hero.addEventListener('pointerup', up);
       hero.addEventListener('pointerleave', () => { const p = part(b.pressed); if (p) p.style.opacity = 0; });
@@ -379,7 +379,8 @@ const PLAY = `
 `;
 
 const GROUPS = [
-  ['Actions', ['button', 'icon_button', 'segmented', 'tabs']],
+  ['Actions', ['button', 'icon_button', 'segmented']],
+  ['Navigation', ['tabs', 'pages']],
   ['Inputs', ['toggle', 'radio', 'slider', 'dropdown', 'input_field', 'keyboard', 'keyboard_dock']],
   ['Lists and cards', ['list_item', 'scrollbar', 'tile']],
   ['Over the screen', ['sheet', 'overlay', 'form']],
@@ -531,12 +532,16 @@ function componentPage(key, c, content, parts) {
 
   // ---- left: the designer's world
   const controls = props.map(([p, vals]) => `<div class="ctl"><label>${p}</label><div class="seg" data-prop="${p}">${vals.map((v, i) => `<button${i === 0 ? ' class="on"' : ''} data-value="${v}">${v}</button>`).join('')}</div></div>`).join('');
-  let left = `<h2><b>${esc(title)}</b> in Figma</h2>
+  // a component of code only (kind: code in its guide, as Pages) has no set to show or drag:
+  // its page shows how the design lays its frames out and what the app does
+  let left = kind === 'code' ? `<h2><b>${esc(title)}</b> in Figma</h2>
+<p class="role">${inline(role)}</p>` : `<h2><b>${esc(title)}</b> in Figma</h2>
 <div class="canvas" id="hero">${names.length ? svgs[names[0]] : `<div class="muted">no preview yet</div>`}</div>
 <div class="hint">${kind === 'display' ? 'display only: nothing to tap' : 'tap or drag the component: the right side shows what happens in the app'}</div>
 <div class="controls">${controls}</div>
 <p class="role">${inline(role)}</p>`;
-  if (kind !== 'sheet') {
+  if (kind === 'code') { /* the guide's "In Figma" below says what the designer draws */ }
+  else if (kind !== 'sheet') {
     left += `<h3>Put it on a screen</h3><ol class="steps">
 <li>Assets → the library → drag <code>${esc(c.set)}</code> onto the screen${props.length ? ' and pick any variant (the app sets the real one)' : ''}.</li>
 <li>Wrap it in a frame (Ctrl/Cmd + Alt + G) of the same size and name the frame <code class="slotref">${SLOT}</code>: that name is the contract with the app.${kind === 'list' ? ' A list is a clipping frame with as many preview rows as it shows; the scrollbar is a slot of its own beside it.' : ''}</li>
@@ -549,10 +554,10 @@ function componentPage(key, c, content, parts) {
   const pr = recipe(key, SLOT, field, 'list');
   // ---- right: the developer's world: the path of an event, lit by the simulation
   let right = `<h2><b>${esc(title)}</b> in the app <a class="ai" href="../../content/${key}.md" title="docs/content/${key}.md: the guide, for people and programs">guide</a>${pr ? ` <a class="ai" href="../../examples/${key}.rs" title="docs/examples/${key}.rs: the code, compiled by everyware_ui_recipes_test">example</a>` : ''}</h2>${flowStrip()}`;
-  if (kind === 'sheet') {
+  if (kind === 'sheet' || kind === 'code') {
     const app = (sections['Quick start'] ? `<h3>Quick start</h3>${sec('Quick start')}` : '') + sec('In the app')
       + (sections['From the app'] ? `<h3>From the app</h3>${sec('From the app')}` : '');
-    right += app || `<p>See <a href="sheet.html">#sheet</a>.</p>`;
+    right += app || (kind === 'sheet' ? `<p>See <a href="sheet.html">#sheet</a>.</p>` : '');
   }
   else {
     if (sections['Quick start']) right += `<div class="quick"><h3>Quick start</h3>${secText('Quick start')}</div>`;
@@ -589,7 +594,7 @@ ${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</co
 
   // ---- details, folded
   const more = (t, inner) => inner ? `<details class="more"><summary>${t}</summary><div class="body">${inner}</div></details>` : '';
-  body += more('All variants', `<p class="muted">${props.length ? `${props.map(([p, v]) => `<span class="pill">${p}</span>${v.map(x => `<code>${x}</code>`).join(' ')}`).join('<br>')}<br>The variant string, as harry expects it: <code>${defaultVariant}</code> (properties in this order). Click one to see it above.` : 'One variant.'}</p>${gallery(c)}`);
+  if (kind !== 'code') body += more('All variants', `<p class="muted">${props.length ? `${props.map(([p, v]) => `<span class="pill">${p}</span>${v.map(x => `<code>${x}</code>`).join(' ')}`).join('<br>')}<br>The variant string, as harry expects it: <code>${defaultVariant}</code> (properties in this order). Click one to see it above.` : 'One variant.'}</p>${gallery(c)}`);
   const tr = transitionsOf(key);
   body += more('What the code sets, and how it moves', `${c.value ? `<p>${inline(c.value)}</p>` : ''}${sp ? `<table><thead><tr><th>Node</th><th></th></tr></thead><tbody>${sp.names.map(n => `<tr><td><code>${esc(n)}</code></td><td>${sp.optional.includes(n) ? 'not in every variant' : ''}</td></tr>`).join('')}</tbody></table>` : ''}${tr.length ? `<h3>Transitions</h3><table><thead><tr><th>Change</th><th>Duration</th><th>Easing</th></tr></thead><tbody>${tr.map(t => `<tr><td>${t.change}</td><td>${t.ms} ms</td><td>${t.easing}</td></tr>`).join('')}</tbody></table><p class="muted">from <code>components.json</code>; the app passes them to harry as <code>AnimationOverride</code></p>` : ''}${partNames.length ? `<h3>Try the parts</h3><div class="controls parts">${partNames.map(n => { const k = /pressed|\/on$|focus|selected|caret|ring|\/open$|\/list$/.test(n) ? 'opacity' : /thumb|fill|marker|progress|\/bar$/.test(n) ? 'meter' : /label|title|subtitle|text|value|helper|placeholder/.test(n) ? 'text' : ''; const id = esc(n); if (!k) return ''; if (k === 'opacity') return `<div class="ctl"><label><code>${id}</code></label><label class="sw"><input type="checkbox" data-part="${id}" data-kind="opacity"> shown</label></div>`; if (k === 'meter') return `<div class="ctl"><label><code>${id}</code></label><input type="range" min="0" max="100" value="60" data-part="${id}" data-kind="meter"></div>`; return `<div class="ctl"><label><code>${id}</code></label><input type="text" placeholder="type a text" data-part="${id}" data-kind="text"></div>`; }).join('')}</div>` : ''}`);
   body += more('Rust API', api.length ? `<p class="muted"><code>${esc(rustFile)}</code></p><div class="api">${api.map(t => `<h3><code>pub ${t.kind} ${t.type}</code></h3><p class="doc">${inline(t.doc)}</p>${t.variants.length ? `<table><tbody>${t.variants.map(v => `<tr><td><code>${v.name}</code></td><td>${inline(v.doc)}</td></tr>`).join('')}</tbody></table>` : ''}${t.fns.map(f => `<div class="fn"><code class="sig">${esc(f.sig)}</code><p class="doc">${inline(f.doc)}</p></div>`).join('')}`).join('')}</div>` : '');
@@ -597,13 +602,17 @@ ${pr && pr.act ? `<pre><code class="language-rust">${esc(pr.act.join('\n'))}</co
 <tr><th>Figma</th><td>${where.figma ? `<a class="figma" data-node="${where.figma.id}" href="#">${esc(c.set)} on the Components page</a> <span class="muted">(set the file key in the menu)</span>` : '<span class="muted">no set in the design (code only)</span>'}</td></tr>
 <tr><th>Spec</th><td>${fileLink(where.spec)} <span class="muted">properties, values, transitions</span></td></tr>
 <tr><th>Rust</th><td>${fileLink(where.rust)} ${where.type ? `<span class="muted"><code>${where.type}</code>, the state machine</span>` : ''}</td></tr>
-<tr><th>harry binding</th><td>${fileLink(where.slot)} <span class="muted">the parts of the clone the code sets</span></td></tr>
-</tbody></table><ol class="steps">
+${kind === 'code' ? '' : `<tr><th>harry binding</th><td>${fileLink(where.slot)} <span class="muted">the parts of the clone the code sets</span></td></tr>`}
+</tbody></table>${kind === 'code' ? `<ol class="steps">
+<li>A transition: <code>components.json</code>.</li>
+<li>The drawing: frames of the app's own design, no set in the Library (In Figma above).</li>
+<li>The behaviour: the Rust module; the example, compiled and run by <code>everyware_ui_recipes_test</code>.</li>
+</ol>` : `<ol class="steps">
 <li>A property, a value or a transition: <code>components.json</code>; the order of <code>props</code> is the order of the variant name.</li>
 <li>The drawing: the component set <code>${esc(c.set)}</code> in the Figma library, every variant; the layers the code sets keep their names <code>${esc(c.set)}/&lt;part&gt;</code>, nothing hidden.</li>
 <li>The behaviour: the Rust module${where.type ? ` (<code>${where.type}</code>; <code>variant()</code> produces the set's variant string)` : ''}; the parts: the harry binding.</li>
 <li>Fetch the design into the app and run <code>everyware_ui_test</code>: it fails when a variant or a part the code uses is missing in the design.</li>
-</ol>`);
+</ol>`}`);
   if (sections.Traps) body += more('Traps', markdown(sections.Traps));
   if (sections['How it works']) body += more('How it works', sec('How it works'));
   for (const [h] of Object.entries(sections).filter(([h]) => !PLACED.includes(h))) body += `<div class="card"><h3>${esc(h)}</h3>${sec(h)}</div>`;
@@ -716,15 +725,21 @@ function componentMd(key, c, parts) {
   const field = slot.replace(/^#/, '').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
   const T = where.type || 'Component';
   const L = [];
-  L.push(`# ${c.set}`, '');
+  L.push(`# ${kind === 'code' ? (content && content.meta.title) || key : c.set}`, '');
   L.push(content && content.meta.role ? content.meta.role : (c.value || '').split(/[.;]/)[0], '');
   L.push('## Figma', '');
-  L.push(`- set: \`${c.set}\`${where.figma ? ` (node ${where.figma.id} in the Library)` : ''}`);
-  for (const [p, v] of Object.entries(c.props || {})) L.push(`- property \`${p}\`: ${v.map(x => `\`${x}\``).join(' | ')}`);
-  L.push(`- variant string: \`${Object.entries(c.props || {}).map(([p, v]) => `${p}=${v[0]}`).join(', ')}\` (the properties in this order; \`${T}::variant()\` produces it, never typed by hand)`);
-  if (c.value) L.push(`- parts the code sets: ${c.value}`);
-  if (sp) L.push(`- nodes set by code (\`${sp.type}\`, harry/src/slot.rs): ${sp.names.map(n => `\`${n}\``).join(', ')}`);
-  L.push(`- to place one: a frame named \`#<screen>/<name>\` with an instance of \`${c.set}\` inside (the slot); texts in it are placeholders, nothing hidden`);
+  if (kind === 'code') {
+    // no set, no variant, no slot: the app's own frames, as the guide's "In Figma" says
+    L.push('- no component set and no slot: the app moves frames of its own design (the guide\'s "In Figma" below)');
+    if (c.value) L.push(`- what it is: ${c.value}`);
+  } else {
+    L.push(`- set: \`${c.set}\`${where.figma ? ` (node ${where.figma.id} in the Library)` : ''}`);
+    for (const [p, v] of Object.entries(c.props || {})) L.push(`- property \`${p}\`: ${v.map(x => `\`${x}\``).join(' | ')}`);
+    L.push(`- variant string: \`${Object.entries(c.props || {}).map(([p, v]) => `${p}=${v[0]}`).join(', ')}\` (the properties in this order; \`${T}::variant()\` produces it, never typed by hand)`);
+    if (c.value) L.push(`- parts the code sets: ${c.value}`);
+    if (sp) L.push(`- nodes set by code (\`${sp.type}\`, harry/src/slot.rs): ${sp.names.map(n => `\`${n}\``).join(', ')}`);
+    L.push(`- to place one: a frame named \`#<screen>/<name>\` with an instance of \`${c.set}\` inside (the slot); texts in it are placeholders, nothing hidden`);
+  }
   const tr = transitionsOf(key);
   if (tr.length) L.push('', '## Transitions (components.json, through `transition()`)', '', ...tr.map(t => `- ${t.change}: ${t.ms} ms ${t.easing}`));
   L.push('', '## Rust', '');
@@ -741,7 +756,7 @@ function componentMd(key, c, parts) {
       for (const f of t.fns) if (!['new', 'on'].includes(f.name)) L.push(`  - \`${f.sig}\`: ${f.doc}`);
     }
   } else L.push('- no Rust state machine: the app sets the parts directly (texts, opacities, meters)');
-  if (kind !== 'sheet') {
+  if (kind !== 'sheet' && kind !== 'code') {
     const rc = recipe(key, slot, field, 'list');
     if (rc) {
       L.push('', '## The app: the lines per component on the screen (compiled by everyware_ui_recipes_test)', '', '```rust',
@@ -755,7 +770,7 @@ function componentMd(key, c, parts) {
     } else L.push('', '## The app', '', `No Rust binding yet: the app cannot put \`${c.set}\` in a slot (no \`impl Slotted\` in harry/src/slot.rs).`);
   }
   if (content && content.body.trim()) L.push('', content.body.trim());
-  L.push('', '## Check', '', '- `everyware_ui_test` (host): the variants and parts the code uses exist in the app\'s .dcf', '- `scripts/check.sh` before the commit: tests, coverage, this file regenerated (`node docs/build-docs.js`)');
+  L.push('', '## Check', '', kind === 'code' ? '- `everyware_ui_recipes_test` (host): the example runs; `node docs/check-guides.js --app`: the names the app binds are in its .dcf' : '- `everyware_ui_test` (host): the variants and parts the code uses exist in the app\'s .dcf', '- `scripts/check.sh` before the commit: tests, coverage, this file regenerated (`node docs/build-docs.js`)');
   return L.join('\n') + '\n';
 }
 

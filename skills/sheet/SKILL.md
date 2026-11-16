@@ -21,7 +21,11 @@ Library #sheet (layout=dialog|left|right|top|bottom, state=closed|open)
    one inner frame of the content's size, with the app's layers and slots inside it
    (`#wifi/networks`, `#wifi/password`, the buttons' slots: use-component skill). A step or
    mode of the sheet is a variant property of this component (`step=networks|password`): the
-   app sets this variant on the content, never on the sheet.
+   app sets this variant on the content, never on the sheet. A page deeper that slides in and
+   Back that slides it out (the settings and the list one of their rows opens) is `Pages`
+   instead (ui-lib docs/content/pages.md): the pages are frames of the content side by side,
+   the app moves them by opacity and x, so the switch is display only; a variant change builds
+   harry's tree again.
 2. **The sheet on the screen**: an instance of the Library's `#sheet` (`layout=dialog` or an
    edge, `state=closed`) inside a plain absolute frame over the whole screen (an absolute
    instance by itself lands in the root's flow after import). Select the nested

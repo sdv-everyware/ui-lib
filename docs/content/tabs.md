@@ -10,6 +10,7 @@ The user taps a tab, its pill lights and the screen behind it fades in while the
 - Two to four screens of the same app that the user moves between: Overview, Rooms, Automations.
 - A value inside a widget (a fan's Low, Med, High): a `#segmented` button. Tabs change what the whole screen shows, a segmented button changes one setting.
 - One screen over another for a moment (a device's details, a password): a `#sheet` (docs/content/sheet.md).
+- Pages in one place that the user goes deeper into and back from, without a tab bar (a sheet's settings and the list a row opens): `Pages` (docs/content/pages.md). It uses the same effects as the screens behind tabs.
 
 ## Quick start
 **What.** The tab bar of the panel, Overview, Rooms and Automations. A tap on Rooms fades the dashboard out and the rooms in.
