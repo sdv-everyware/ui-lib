@@ -104,7 +104,7 @@ A slot 68 × 40 named `#<screen>/<name>` (`#entryway/light`) with an instance of
 ## Traps
 - On and off as a variant would switch in a step and rebuild the tree: keep the value on the marker and the opacity, as the binding does.
 - Two toggles on one screen share the part names `#toggle/thumb` and `#toggle/on`: each in its own slot, or they move together.
-- A toggle inside a list row needs a harry where a list item's customizations reach the animation (the display_safety tree has it); stock harry switches it instead of sliding.
+- A toggle inside a list row needs a harry where a list item's customizations reach the animation ([super-harry](https://github.com/sdv-everyware/super-harry) has it); the harry of android-17.0.0_r1 switches it instead of sliding.
 
 ## Example
 [docs/examples/toggle.rs](../examples/toggle.rs): the whole path, from a tap on the switch to the command to the light and the value the light reports, compiled and run by `everyware_ui_recipes_test`.
