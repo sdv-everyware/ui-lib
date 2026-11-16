@@ -3,7 +3,10 @@
 //! (`#list-item/title`), the supporting text (`#list-item/subtitle`) and the trailing end (an
 //! icon `#list-item/trailing`, a toggle, a chevron, with an image a trailing text
 //! `#list-item/trailing-text`, or with kind text the trailing text alone: a value on the right
-//! of its label). `lines` sets the height: one (headline), two (one line of
+//! of its label). Kind leading text has a short text of two lines at the start
+//! (`#list-item/leading-title` over `#list-item/leading-subtitle`) and a thin bar
+//! (`#list-item/accent`) in a colour the code sets; kind subheader is the label of a group of
+//! rows with a trailing text, on the list's background. `lines` sets the height: one (headline), two (one line of
 //! supporting text), three (a tall row, headline and supporting text up to two lines each). An icon slot holds every glyph of the library's `#icon` as an
 //! instance `#list-item/<slot>/<glyph>` at opacity 0; the code lights one. (harry does not
 //! swap the variant of an instance inside a list item: overrides.rs reads the global
@@ -38,6 +41,13 @@ pub enum ListItemKind {
     /// A label and its value (the trailing supporting text of Material 3) at the end, in one
     /// line: "Firmware · 0.1.0".
     Text,
+    /// A short text of two lines before the headline (a strong line over a dim one: "8:30" over
+    /// "30 min") and a thin bar between them in a colour the code sets (`accent`); lines two.
+    LeadingText,
+    /// The label of the group of rows below it, with a trailing text ("Section · 3 items"):
+    /// lower than a row, no card, lines one (Material's list subheader). In a list of taller
+    /// rows it takes its own pitch (`pitch`).
+    Subheader,
 }
 
 /// The lines property of #list-item: the height of the row.
@@ -67,7 +77,7 @@ pub enum ListItemSize {
 }
 
 /// A row of a list.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ListItem {
     /// What is at the ends of the row.
     pub kind: ListItemKind,
@@ -89,8 +99,17 @@ pub struct ListItem {
     pub lines: ListItemLines,
     /// The picture of kind image: the key of a registered image; None keeps the placeholder.
     pub image: Option<String>,
-    /// The trailing text of kinds image (a source, an age) and text (the value).
+    /// The trailing text of kinds image (a source, an age), text (the value) and subheader.
     pub trailing_text: String,
+    /// The strong line before the headline (kind leading text).
+    pub leading_title: String,
+    /// The dim line under it.
+    pub leading_subtitle: String,
+    /// The colour of the bar of kind leading text, 0xRRGGBB; None keeps the design's accent.
+    pub accent: Option<u32>,
+    /// What the row takes of its list (its height plus the gap) when that is not the list's
+    /// pitch: a subheader between taller rows. None: the list's pitch.
+    pub pitch: Option<f32>,
 }
 
 /// What a list item reports.
@@ -101,9 +120,11 @@ pub enum ListItemEvent {
 }
 
 impl ListItem {
-    /// A new, enabled row.
+    /// A new, enabled row. A subheader has one line, every other kind two until `lines` says
+    /// otherwise.
     pub fn new(kind: ListItemKind, title: impl Into<String>, subtitle: impl Into<String>) -> Self {
-        ListItem { kind, title: title.into(), subtitle: subtitle.into(), ..Default::default() }
+        let lines = if kind == ListItemKind::Subheader { ListItemLines::One } else { ListItemLines::Two };
+        ListItem { kind, title: title.into(), subtitle: subtitle.into(), lines, ..Default::default() }
     }
 
     /// The leading icon (kind icon): a glyph of `#icon`.
@@ -142,9 +163,31 @@ impl ListItem {
         self
     }
 
-    /// The trailing text (kinds image and text).
+    /// The trailing text (kinds image, text and subheader).
     pub fn trailing_text(mut self, text: impl Into<String>) -> Self {
         self.trailing_text = text.into();
+        self
+    }
+
+    /// The two lines before the headline (kind leading text): the strong one over the dim one.
+    pub fn leading_text(mut self, title: impl Into<String>, subtitle: impl Into<String>) -> Self {
+        self.leading_title = title.into();
+        self.leading_subtitle = subtitle.into();
+        self
+    }
+
+    /// The colour of the bar (kind leading text), 0xRRGGBB. Each colour becomes a picture
+    /// that stays for the life of the process (harry has no colour of its own to set), so the
+    /// colours come from a palette, not from free data.
+    pub fn accent(mut self, rgb: u32) -> Self {
+        self.accent = Some(rgb & 0xff_ffff);
+        self
+    }
+
+    /// What the row takes of its list, its height plus the gap, when that is not the list's
+    /// pitch (`ListView::new`): a subheader between taller rows.
+    pub fn pitch(mut self, pitch: f32) -> Self {
+        self.pitch = Some(pitch);
         self
     }
 
@@ -179,6 +222,8 @@ impl Component for ListItem {
             ListItemKind::Chevron => "chevron",
             ListItemKind::Image => "image",
             ListItemKind::Text => "text",
+            ListItemKind::LeadingText => "leading-text",
+            ListItemKind::Subheader => "subheader",
         };
         let lines = match self.lines {
             ListItemLines::One => "one",
@@ -222,6 +267,22 @@ mod tests {
         let item = ListItem::new(ListItemKind::Text, "Firmware", "").lines(ListItemLines::One).size(ListItemSize::Column).trailing_text("0.1.0");
         assert_eq!(item.variant(), "state=default, kind=text, lines=one, size=column");
         assert_eq!(item.trailing_text, "0.1.0");
+    }
+
+    #[test]
+    fn a_row_with_a_leading_text_and_an_accent() {
+        let item = ListItem::new(ListItemKind::LeadingText, "Stand-up", "Room 2").leading_text("8:30", "30 min").accent(0xff33_b679).size(ListItemSize::Column);
+        assert_eq!(item.variant(), "state=default, kind=leading-text, lines=two, size=column");
+        assert_eq!((item.leading_title.as_str(), item.leading_subtitle.as_str(), item.accent), ("8:30", "30 min", Some(0x33b679)));
+        assert_eq!(ListItem::new(ListItemKind::LeadingText, "A", "").accent, None, "the design's accent");
+    }
+
+    #[test]
+    fn a_subheader_has_one_line_and_its_own_pitch() {
+        let item = ListItem::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items").pitch(56.0);
+        assert_eq!(item.variant(), "state=default, kind=subheader, lines=one, size=regular");
+        assert_eq!((item.trailing_text.as_str(), item.pitch), ("3 items", Some(56.0)));
+        assert_eq!(ListItem::new(ListItemKind::Plain, "A", "").pitch, None);
     }
 
     #[test]

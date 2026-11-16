@@ -1,5 +1,5 @@
-//! #list-item in an app: a news feed, one row per story with its picture, in a list that scrolls
-//! with the finger and takes a tap. The docs show the parts between the doc marks
+//! #list-item in an app: rows of the app's data in a list that scrolls with the finger and takes
+//! a tap: stories with their pictures, or rows in groups under a subheader each. The docs show the parts between the doc marks
 //! (docs/build-docs.js); the tests at the end compile and run them (everyware_ui_recipes_test).
 //! Edit here: this file is the example of the guide docs/content/list_item.md.
 
@@ -16,7 +16,7 @@ use everyware_ui::list_view::{ListEvent, ListView};
 const LIST_H: f32 = 744.0;
 const ROW_PITCH: f32 = 128.0 + 8.0;
 
-/// A story as the app has it. Yours comes from a service (smarthome-app: the news bundle).
+/// A story as the app has it. Yours comes from a service.
 #[derive(Clone, Debug)]
 pub struct Story {
     pub id: u64,
@@ -28,7 +28,7 @@ pub struct Story {
 // state.rs: in struct State, and its first value in State::new
 pub struct State {
     // doc:state
-    /// The rows and where they are scrolled to: one `ListItem` per story.
+    /// The rows and where they are scrolled to: one `ListItem` per item of the app's data.
     pub my_list_item: ListView,
     // doc:end
 }
@@ -37,7 +37,7 @@ impl State {
     pub fn new(sizes: &Sizes) -> Self {
         State {
             // doc:init
-            // empty until the first stories come; the slot's height and the row pitch
+            // empty until the first data comes; the slot's height and the row pitch
             my_list_item: ListView::new([], LIST_H, ROW_PITCH),
             // doc:end
         }
@@ -68,7 +68,7 @@ pub fn on_gesture(state: &mut State, node: &str, gesture: Gesture) {
             let row = row_of("#doc/list_item", node);
             if let Some(ListEvent::Chosen(row)) = state.my_list_item.on(row, gesture, Instant::now()) {
                 state.my_list_item.select(Some(row));
-                log::info!("story {row} chosen"); // yours: open it
+                log::info!("row {row} chosen"); // yours: open it
             }
         }
         // doc:end
@@ -97,7 +97,40 @@ pub fn show_picture(id: u64, rgb: &[u8], width: u32, height: u32) {
         log::warn!("picture of story {id}: {err}");
     }
 }
+
+/// A subheader is 48 high, a row of two lines 72; 8 between them.
+const SUBHEADER_PITCH: f32 = 48.0 + 8.0;
+const TWO_LINES_PITCH: f32 = 72.0 + 8.0;
+
+/// Rows in groups: a subheader over each group (its label and a trailing text), then rows that
+/// lead with a short text of two lines and a bar in the group's colour (from a palette: each
+/// colour stays a picture). Each row takes its own pitch, so the rows after a subheader move up.
+pub fn show_groups(state: &mut State, groups: &[Group]) {
+    state.my_list_item.set_rows(groups.iter().flat_map(|group| {
+        let head = ListItem::new(ListItemKind::Subheader, group.label.clone(), "")
+            .trailing_text(group.count.clone())
+            .size(ListItemSize::Column)
+            .pitch(SUBHEADER_PITCH);
+        let rows = group.stories.iter().map(|story| {
+            ListItem::new(ListItemKind::LeadingText, story.title.clone(), story.summary.clone())
+                .leading_text(story.age.clone(), "ago")
+                .accent(group.color)
+                .size(ListItemSize::Column)
+                .pitch(TWO_LINES_PITCH)
+        });
+        std::iter::once(head).chain(rows)
+    }));
+}
 // doc:end
+
+/// Stories under a label ("TODAY"), with their count and a colour for the bars.
+#[derive(Clone, Debug)]
+pub struct Group {
+    pub label: String,
+    pub count: String,
+    pub color: u32,
+    pub stories: Vec<Story>,
+}
 
 #[cfg(test)]
 fn stories(n: u64) -> Vec<Story> {
@@ -152,6 +185,24 @@ fn list_item_new_stories_keep_the_selected_row() {
     show_stories(&mut state, &next);
     assert_eq!(state.my_list_item.selected(), Some(2));
     assert_eq!(state.my_list_item.rows()[2].title, "Story 1");
+}
+
+#[test]
+fn list_item_groups_have_a_subheader_each_and_rows_with_a_leading_text() {
+    let mut state = State::new(&Sizes::none());
+    let mut model = UiModel::new(HashMap::new());
+    let group = |label: &str, color: u32, n: u64| Group { label: label.into(), count: format!("{n} STORIES"), color, stories: stories(n) };
+    show_groups(&mut state, &[group("TODAY", 0x0b8043, 2), group("YESTERDAY", 0x039be5, 3)]);
+    present(&mut model, &state);
+    let list = &state.my_list_item;
+    let rows = list.rows();
+    assert_eq!(rows.len(), 7);
+    assert_eq!(rows[0].variant(), "state=default, kind=subheader, lines=one, size=column");
+    assert_eq!(rows[1].variant(), "state=default, kind=leading-text, lines=two, size=column");
+    assert_eq!((rows[1].leading_title.as_str(), rows[1].accent), ("2 h", Some(0x0b8043)));
+    // the second subheader comes after one subheader and two rows
+    assert_eq!(list.offset(3), SUBHEADER_PITCH + 2.0 * TWO_LINES_PITCH);
+    assert_eq!(list.content_h(), 2.0 * SUBHEADER_PITCH + 5.0 * TWO_LINES_PITCH);
 }
 
 #[test]

@@ -11,37 +11,37 @@ While the user drags or flings a list, a thin thumb shows beside it: at the top 
 - Not for a list whose rows always fit: it would never show. Not for a value the user sets (that is a `#slider`).
 
 ## Quick start
-**What.** The thin bar next to the news list that shows where in the list the user is. It appears while the list moves and fades out after.
+**What.** The thin bar next to the agenda's list that shows where in the list the user is. It appears while the list moves and fades out after.
 
 **Why.** The bar has nothing to remember: it is drawn from the same list as the rows, so it always shows the list's real position.
 
-<!-- example: docs/examples/scrollbar.rs use slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs use slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 use everyware_ui::list_view::ListView;
 ```
 
-<!-- example: docs/examples/scrollbar.rs state slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs state slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 /// The list the scrollbar follows (the list item's guide shows its slot and its gestures).
 pub list: ListView,
 ```
 
-<!-- example: docs/examples/scrollbar.rs init slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs init slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 // as high as the design draws the list's slot: no height in the code
-list: ListView::new([], sizes.frame("#news/list").map_or(0.0, |f| f.height), ROW_PITCH),
+list: ListView::new([], sizes.frame("#agenda/list").map_or(0.0, |f| f.height), ROW_PITCH),
 ```
 
-<!-- example: docs/examples/scrollbar.rs model slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs model slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 // not interactive: it takes no taps
-news_scrollbar: Slot = "#news/scrollbar" ["SlotCustomizer"];
+agenda_scrollbar: Slot = "#agenda/scrollbar" ["SlotCustomizer"];
 ```
 
-<!-- example: docs/examples/scrollbar.rs present slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs present slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 // the same ListView as the list's line: the thumb moves with its scroll, frame by frame
-model.news_scrollbar = scrollbar("#news/scrollbar", &state.list);
+model.agenda_scrollbar = scrollbar("#agenda/scrollbar", &state.list);
 ```
 
 ## How it behaves
@@ -56,7 +56,7 @@ model.news_scrollbar = scrollbar("#news/scrollbar", &state.list);
 
 **Why.** New rows give the content a new length: `set_rows` keeps the scroll inside it, so with fewer rows the thumb moves up, and with rows that fit it goes back to the top.
 
-<!-- example: docs/examples/scrollbar.rs change slot=#news/scrollbar field=news_scrollbar -->
+<!-- example: docs/examples/scrollbar.rs change slot=#agenda/scrollbar field=agenda_scrollbar -->
 ```rust
 /// The app changes the list, never the scrollbar: new rows give the content a new length and
 /// the thumb follows at the next frame. Rows that fit in the slot scroll nowhere: the thumb
@@ -69,7 +69,7 @@ pub fn show_titles(state: &mut State, titles: &[&str]) {
 ```
 
 ## In Figma
-A slot as high as the list, beside the list's slot (`#news/scrollbar` next to `#news/list`), that clips, with an instance of `#scrollbar` whose bottom is at the slot's bottom: everyware's `fig-helpers.js` `scrollbarSlot(parent, name, x, y, height)` draws it. Not inside the list's slot: there it would scroll away with the rows.
+A slot as high as the list, beside the list's slot (`#agenda/scrollbar` next to `#agenda/list`), that clips, with an instance of `#scrollbar` whose bottom is at the slot's bottom: everyware's `fig-helpers.js` `scrollbarSlot(parent, name, x, y, height)` draws it. Not inside the list's slot: there it would scroll away with the rows.
 
 ## How it works
 One component serves a list of any height, as Android draws a view's scrollbar from the list's extent (`View.onDrawScrollBars`). It is drawn as high as the screen (1080). `scrollbar(...)` puts the clone with its bottom at the list's bottom and sets the track `#scrollbar/track`, a vertical progress bar that grows from the bottom, to the `ListView`'s height. The thumb `#scrollbar/thumb`, a vertical progress marker, moves along that part, set from the scroll every frame. The whole clone fades: opacity 1 while the content moves and `SCROLLBAR_DELAY` (300 ms) after, then 0 with the transition `hide`. harry wakes up when the delay ends; the app sends nothing.

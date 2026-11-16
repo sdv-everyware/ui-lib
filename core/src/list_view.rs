@@ -1,7 +1,7 @@
 //! A scrolling list of rows (`#list-item`, or any `Row`) in a slot that clips: Android's touch handling
 //! (scroller.rs: touch slop, drag, fling on release, a press catches a running fling) over
-//! harry's lists. The rows sit one under the other, `pitch` apart, and the whole content
-//! moves by the scroll; the harry glue (everyware_ui::list) puts every row at its y minus
+//! harry's lists. The rows sit one under the other, `pitch` apart (a row with a pitch of its
+//! own, a subheader, takes that), and the whole content moves by the scroll; the harry glue (everyware_ui::list) puts every row at its y minus
 //! the scroll of the moment, and steps a fling frame by frame on its own: the state here
 //! only holds where the fling started, so no ticks reach the app.
 //!
@@ -87,6 +87,11 @@ pub trait Row: Clone + Debug {
     fn is_selected(&self) -> bool;
     /// Takes over the pressed and selected state of the row it replaces.
     fn keep_state_of(&mut self, before: &Self);
+    /// What the row takes of the list (its height plus the gap) when that is not the list's
+    /// pitch; None: the list's.
+    fn pitch(&self) -> Option<f32> {
+        None
+    }
 }
 
 impl Row for ListItem {
@@ -106,6 +111,9 @@ impl Row for ListItem {
         self.press = before.press.clone();
         self.selected = before.selected;
     }
+    fn pitch(&self) -> Option<f32> {
+        self.pitch
+    }
 }
 
 /// A scrolling list of rows (`#list-item` by default, any `Row`).
@@ -114,7 +122,7 @@ pub struct ListView<R: Row = ListItem> {
     rows: Vec<R>,
     /// Height of the slot (the clipping viewport).
     view_h: f32,
-    /// Row height plus gap.
+    /// Row height plus gap (a row may have its own: `Row::pitch`).
     pitch: f32,
     scroll: Scroll,
     drag: Option<Drag>,
@@ -141,7 +149,8 @@ impl<R: Row> ListView<R> {
         if self.horizontal { x } else { y }
     }
 
-    /// A list of these rows in a slot `view_h` high, rows `pitch` apart (row height plus gap).
+    /// A list of these rows in a slot `view_h` high, rows `pitch` apart (row height plus gap;
+    /// a row with a pitch of its own takes that).
     pub fn new(rows: impl IntoIterator<Item = R>, view_h: f32, pitch: f32) -> Self {
         ListView {
             rows: rows.into_iter().collect(),
@@ -184,9 +193,20 @@ impl<R: Row> ListView<R> {
         self.scroll.base = self.scroll.base.min(self.max_scroll());
     }
 
-    /// The row pitch (height plus gap).
+    /// The row pitch (height plus gap) of a row without one of its own.
     pub fn pitch(&self) -> f32 {
         self.pitch
+    }
+
+    /// What row `row` takes of the list: its own pitch, else the list's.
+    pub fn extent(&self, row: usize) -> f32 {
+        self.rows.get(row).and_then(Row::pitch).unwrap_or(self.pitch)
+    }
+
+    /// Where row `row` starts along the content (the rows before it, each with its extent);
+    /// past the last row, where the next one would start.
+    pub fn offset(&self, row: usize) -> f32 {
+        (0..row.min(self.rows.len())).map(|i| self.extent(i)).sum::<f32>() + row.saturating_sub(self.rows.len()) as f32 * self.pitch
     }
 
     /// The viewport's height.
@@ -207,12 +227,12 @@ impl<R: Row> ListView<R> {
     /// Where row `row` starts along the list at `now`, in the slot's pixels (its y, or its x
     /// for a horizontal list): a control inside the row takes its place from it.
     pub fn row_offset(&self, row: usize, now: Instant) -> f32 {
-        row as f32 * self.pitch - self.scroll_at(now)
+        self.offset(row) - self.scroll_at(now)
     }
 
-    /// The content's height (rows times pitch; the gap after the last row stays).
+    /// The content's height (every row's extent; the gap after the last row stays).
     pub fn content_h(&self) -> f32 {
-        self.rows.len() as f32 * self.pitch
+        self.offset(self.rows.len())
     }
 
     /// How far the content scrolls at most.
@@ -235,7 +255,7 @@ impl<R: Row> ListView<R> {
                 r.tap(Gesture::Cancel);
             }
         }
-        let base = (row as f32 * self.pitch).min(self.max_scroll());
+        let base = self.offset(row).min(self.max_scroll());
         self.scroll = Scroll { base, fling: None, moved_at: None };
     }
 
@@ -423,6 +443,25 @@ mod tests {
         l.on(None, Gesture::Up { x: 0.0, y: 100.0, inside: false, velocity: -8000.0, velocity_x: 0.0 }, now);
         let end = l.scroll_at(now + Duration::from_secs(5));
         assert_eq!(end, l.max_scroll());
+    }
+
+    #[test]
+    fn a_row_with_a_pitch_of_its_own_moves_the_rows_after_it() {
+        let now = Instant::now();
+        // a subheader 48 apart, three rows 80 apart, a subheader, two rows
+        let row = |i: usize| ListItem::new(ListItemKind::Plain, format!("row {i}"), "");
+        let head = |t: &str| ListItem::new(ListItemKind::Subheader, t, "").pitch(48.0);
+        let rows = [head("a"), row(0), row(1), row(2), head("b"), row(3), row(4)];
+        let mut l = ListView::new(rows, 200.0, 80.0);
+        assert_eq!((l.extent(0), l.extent(1), l.extent(9)), (48.0, 80.0, 80.0));
+        assert_eq!((l.offset(0), l.offset(1), l.offset(4), l.offset(5)), (0.0, 48.0, 288.0, 336.0));
+        assert_eq!(l.content_h(), 2.0 * 48.0 + 5.0 * 80.0);
+        assert_eq!(l.offset(8), l.content_h() + 80.0, "past the last row, the list's pitch");
+        l.scroll_to(4);
+        assert_eq!(l.scroll_at(now), 288.0);
+        assert_eq!(l.row_offset(5, now), 48.0);
+        l.scroll_to(6);
+        assert_eq!(l.scroll_at(now), l.max_scroll(), "no further than the content");
     }
 
     #[test]

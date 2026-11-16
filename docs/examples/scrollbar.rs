@@ -11,7 +11,7 @@ use everyware_ui::list_view::ListView;
 // doc:end
 use everyware_ui::list_item::{ListItem, ListItemKind, ListItemLines, ListItemSize};
 
-/// Rows 128 high, 8 between; the list is as high as its slot in the design (#news/list).
+/// Rows 128 high, 8 between; the list is as high as its slot in the design (#agenda/list).
 const ROW_PITCH: f32 = 128.0 + 8.0;
 
 // state.rs: in struct State, and its first value in State::new
@@ -27,7 +27,7 @@ impl State {
         State {
             // doc:init
             // as high as the design draws the list's slot: no height in the code
-            my_list: ListView::new([], sizes.frame("#news/list").map_or(0.0, |f| f.height), ROW_PITCH),
+            my_list: ListView::new([], sizes.frame("#agenda/list").map_or(0.0, |f| f.height), ROW_PITCH),
             // doc:end
         }
     }

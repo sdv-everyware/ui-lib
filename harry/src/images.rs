@@ -89,6 +89,25 @@ pub fn get(key: &str) -> Option<ImageContentData> {
     store().lock().ok()?.images.get(key).cloned()
 }
 
+/// A solid colour (0xRRGGBB) as a picture of one pixel, for a part whose colour the code sets:
+/// harry has no colour to set on a node, it draws a picture stretched over a plain frame.
+/// Registered at the first use under `color/<rrggbb>` and kept, so the colours come from a
+/// palette (a part's few colours), not from free data.
+pub fn color(rgb: u32) -> Option<ImageContentData> {
+    let key = format!("color/{:06x}", rgb & 0xff_ffff);
+    if let Some(image) = get(&key) {
+        return Some(image);
+    }
+    let [_, r, g, b] = rgb.to_be_bytes();
+    register_rgba(key.as_str(), vec![r, g, b, 255], 1, 1).ok()?;
+    get(&key)
+}
+
+/// Tests that register new keys while another expects the next free slot run one at a time
+/// (the store is the process's, the tests run in threads).
+#[cfg(test)]
+pub(crate) static TEST_STORE: Mutex<()> = Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,7 +122,18 @@ mod tests {
     }
 
     #[test]
+    fn a_colour_is_one_pixel_registered_once() {
+        let _one = TEST_STORE.lock().unwrap_or_else(|e| e.into_inner());
+        let a = color(0x33b679).unwrap();
+        assert_eq!((a.width, a.height), (1, 1));
+        assert_eq!(color(0xff33_b679).unwrap().id, a.id, "the same colour, the same picture");
+        assert_ne!(color(0x039be5).unwrap().id, a.id);
+        assert!(keys("color/").contains(&"color/33b679".to_string()));
+    }
+
+    #[test]
     fn a_freed_slot_is_reused_and_a_key_updates_in_place() {
+        let _one = TEST_STORE.lock().unwrap_or_else(|e| e.into_inner());
         register_rgb("slot/a", &[1, 2, 3], 1, 1).unwrap();
         let a = get("slot/a").unwrap().id;
         register_rgb("slot/a", &[4, 5, 6, 7, 8, 9], 2, 1).unwrap();

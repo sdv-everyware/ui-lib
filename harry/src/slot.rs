@@ -591,21 +591,25 @@ pub fn rows<'a, C: Slotted + 'a>(slot: &str, components: impl IntoIterator<Item 
 /// clips: every row at its y minus the scroll of the frame; a fling moves the rows frame by
 /// frame from here. Taps come as "<slot>/<row>".
 pub fn list<R: Row + Slotted>(slot: &str, view: &ListView<R>) -> Slot {
-    let (pitch, scroll, view_h) = (view.pitch(), view.scroll(), view.view_h());
+    let (scroll, view_h) = (view.scroll(), view.view_h());
+    // where each row starts: the rows before it, each with its extent (ListView::offset)
+    let mut at = 0.0;
     List::new(
         view.rows()
             .iter()
             .enumerate()
             .map(|(row, component)| {
+                let (offset, extent) = (at, view.extent(row));
+                at += extent;
                 let item = ComponentItem::new(slot, R::SET, component.variant());
                 // a ribbon lifts its chosen card (harry has no scale: the card moves up instead)
                 let item = if view.is_horizontal() {
-                    item.row_x(row, row as f32 * pitch).lifted(if component.is_selected() { RIBBON_LIFT } else { 0.0 })
+                    item.row_x(row, offset).lifted(if component.is_selected() { RIBBON_LIFT } else { 0.0 })
                 } else {
-                    item.row(row, row as f32 * pitch)
+                    item.row(row, offset)
                 };
                 let item = item
-                    .scrolled(scroll, view_h, pitch)
+                    .scrolled(scroll, view_h, extent)
                     .animation(animation(component.transition()));
                 component.parts(item)
             })
@@ -667,8 +671,9 @@ impl Slotted for Radio {
 
 impl Slotted for ListRow {
     const SET: &'static str = "#list-item";
-    /// Title, subtitle, the pressed layer, the two icon slots, and with an image the picture
-    /// (a registered image; an unknown key keeps the placeholder) and the trailing text. A row
+    /// Title, subtitle, the pressed layer, the two icon slots, with an image the picture (a
+    /// registered image; an unknown key keeps the placeholder) and the trailing text, with a
+    /// leading text its two lines and the bar's colour (a picture of the colour). A row
     /// names only the parts its kind and lines have: every part costs on every frame (a text,
     /// a meter, a name), in every row, also in the rows nobody sees.
     ///
@@ -680,8 +685,20 @@ impl Slotted for ListRow {
         if self.lines != ListItemLines::One {
             item = item.text("#list-item/subtitle", self.subtitle.clone()).optional("#list-item/subtitle");
         }
-        if matches!(self.kind, ListItemKind::Image | ListItemKind::Text) {
+        if matches!(self.kind, ListItemKind::Image | ListItemKind::Text | ListItemKind::Subheader) {
             item = item.text("#list-item/trailing-text", self.trailing_text.clone()).optional("#list-item/trailing-text");
+        }
+        if self.kind == ListItemKind::LeadingText {
+            item = item
+                .text("#list-item/leading-title", self.leading_title.clone())
+                .text("#list-item/leading-subtitle", self.leading_subtitle.clone())
+                .optional("#list-item/leading-title")
+                .optional("#list-item/leading-subtitle")
+                .optional("#list-item/accent");
+            // the bar's colour: a picture of it on the plain frame (harry sets no fill)
+            if let Some(color) = self.accent.and_then(crate::images::color) {
+                item = item.image("#list-item/accent", color);
+            }
         }
         if self.kind == ListItemKind::Image {
             item = item.optional("#list-item/image");
@@ -1069,6 +1086,44 @@ mod tests {
     }
 
     #[test]
+    fn a_leading_text_sets_its_lines_and_its_accent_and_a_subheader_its_trailing_text() {
+        let _one = crate::images::TEST_STORE.lock().unwrap_or_else(|e| e.into_inner());
+        let has = |parts: &[String], part: &str| parts.iter().any(|p| p == part);
+        let lead = ListRow::new(ListItemKind::LeadingText, "Stand-up", "Room 2").leading_text("8:30", "30 min").accent(0x0b8043);
+        let parts = row_parts(&lead);
+        for part in ["#list-item/leading-title", "#list-item/leading-subtitle", "#list-item/accent", "#list-item/title", "#list-item/subtitle"] {
+            assert!(has(&parts, part), "leading text: {part} missing in {parts:?}");
+        }
+        assert!(!has(&parts, "#list-item/trailing-text") && !has(&parts, "#list-item/leading"));
+        let out = SlotCustomizer::default().format(slot("#r", &lead));
+        let c = item_of(&out);
+        assert_eq!(c.get("#list-item/leading-title").and_then(|c| c.get_text()).map(String::as_str), Some("8:30"));
+        let accent = c.get("#list-item/accent").and_then(|c| c.get_image_content()).expect("the bar's colour");
+        assert_eq!(accent.id, crate::images::color(0x0b8043).unwrap().id);
+        // no colour: the design's accent, no picture
+        let plain = SlotCustomizer::default().format(slot("#r", &ListRow::new(ListItemKind::LeadingText, "A", "")));
+        assert!(item_of(&plain).get("#list-item/accent").and_then(|c| c.get_image_content()).is_none());
+
+        let head = row_parts(&ListRow::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items"));
+        assert!(has(&head, "#list-item/title") && has(&head, "#list-item/trailing-text") && has(&head, "#list-item/pressed"));
+        assert!(!has(&head, "#list-item/subtitle") && !has(&head, "#list-item/trailing"));
+    }
+
+    #[test]
+    fn a_row_with_its_own_pitch_moves_the_rows_after_it() {
+        let rows = [
+            ListRow::new(ListItemKind::Subheader, "A", "").pitch(48.0),
+            ListRow::new(ListItemKind::Plain, "Row 1", ""),
+            ListRow::new(ListItemKind::Plain, "Row 2", ""),
+        ];
+        let view = ListView::new(rows, 400.0, 80.0);
+        let out = SlotCustomizer::default().format(list("#l", &view));
+        let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+        let y = |row: usize| l.items()[row].render_customization().get(&row_name("#l", row)).unwrap().get_node_position_override().unwrap().y();
+        assert_eq!((y(0), y(1), y(2)), (Some(0.0), Some(48.0), Some(128.0)));
+    }
+
+    #[test]
     fn a_stack_without_a_glyph_is_off_as_a_whole() {
         let row = ListRow::new(ListItemKind::Icon, "Home", "").leading("wifi");
         let out = SlotCustomizer::default().format(slot("#r", &row));
@@ -1126,6 +1181,8 @@ mod tests {
             // a row without a glyph: its trailing stack is off as a whole, by its frame
             slot("#s", &ListRow::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00 · Europe").lines(ListItemLines::Two).size(ListItemSize::Panel)),
             slot("#s", &ListRow::new(ListItemKind::Image, "Headline", "Supporting").lines(ListItemLines::Three).size(ListItemSize::Column).image("k").trailing_text("1 h")),
+            slot("#s", &ListRow::new(ListItemKind::LeadingText, "Headline", "Supporting").leading_text("8:30", "30 min").size(ListItemSize::Column)),
+            slot("#s", &ListRow::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items").size(ListItemSize::Column)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::Close)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
             slot("#s", &Segmented::new(["Low", "Med", "High"])),

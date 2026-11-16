@@ -408,7 +408,7 @@ module.exports = function patch(msg, helpers) {
     meter(rect(s, '#scrollbar/thumb', 0, 0, SB_W, SB_THUMB, C.ink2, SB_W / 2), 'progressMarkerData', { vertical: true, startY: 0, endY: SB_MAX - SB_THUMB });
   }, { cols: 1 });
 
-  // 90 variants: on their own below the transitions table, not over the other sets
+  // on their own below the transitions table, not over the other sets (the Tile below them)
   heading(80, 4000, 'List item');
   // The roles of Material 3's list item: a leading slot (none, an #icon glyph, an image), the
   // headline (#list-item/title), the supporting text (#list-item/subtitle) and the trailing
@@ -417,14 +417,35 @@ module.exports = function patch(msg, helpers) {
   // (headline only), two (headline and one line of supporting text), three (a tall row:
   // headline and supporting text up to two lines each, the image as a thumbnail). size: the
   // width (regular 440: a card's column; column 490: a dashboard column; panel 856: the content
-  // of a left or right #sheet beside a scrollbar; wide 960: a dialog sheet).
+  // of a left or right #sheet beside a scrollbar; wide 960: a dialog sheet). Kind leading-text:
+  // a short text of two lines at the start and a thin bar in a colour the code sets; kind
+  // subheader: the label of the group of rows below it, lower and without a card.
   const LI_SIZE = { regular: 440, column: 490, panel: 856, wide: 960 }, LI_HEIGHT = { one: 72, two: 72, three: 128 };
-  const LI_KINDS = ['plain', 'icon', 'image', 'toggle', 'chevron', 'text'];
-  // kind text: the trailing supporting text is the row's value ("Firmware · 0.1.0"), in one line
-  const liCombo = v => v.kind === 'image' ? v.lines !== 'one' : v.kind === 'text' ? v.lines === 'one' : v.lines !== 'three';
-  componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', ['one', 'two', 'three']], ['size', ['regular', 'column', 'panel', 'wide']]], 960, LI_HEIGHT.three, 24, 24, (s, v) => {
-    const op = v.state === 'disabled' ? 0.45 : 1, LI_W = LI_SIZE[v.size], LI_H = LI_HEIGHT[v.lines], tall = v.lines === 'three';
+  const LI_KINDS = ['plain', 'icon', 'image', 'toggle', 'chevron', 'text', 'leading-text', 'subheader'];
+  // Material's list subheader (48): the label at the bottom, nearer the rows it heads than the
+  // rows above it. In a list of rows it takes its own pitch (ui-lib ListItem::pitch).
+  const SUBHEADER_H = 48;
+  // the leading text's column ("12:30 PM" in 15 px semi bold), the bar after it
+  const LEAD_W = 80, ACCENT_W = 4;
+  // kind text: the trailing supporting text is the row's value ("Firmware · 0.1.0"), in one line;
+  // a subheader has one line, a leading text two
+  const liCombo = v => v.kind === 'image' ? v.lines !== 'one'
+    : v.kind === 'text' || v.kind === 'subheader' ? v.lines === 'one'
+    : v.kind === 'leading-text' ? v.lines === 'two' : v.lines !== 'three';
+  const liSet = componentSet(lib, '#list-item', 80, 4000, [['state', ['default', 'selected', 'disabled']], ['kind', LI_KINDS], ['lines', ['one', 'two', 'three']], ['size', ['regular', 'column', 'panel', 'wide']]], 960, LI_HEIGHT.three, 24, 24, (s, v) => {
+    const op = v.state === 'disabled' ? 0.45 : 1, LI_W = LI_SIZE[v.size], LI_H = v.kind === 'subheader' ? SUBHEADER_H : LI_HEIGHT[v.lines], tall = v.lines === 'three';
     s.size = { x: LI_W, y: LI_H };
+    // a text longer than its lines ends in an ellipsis (harry: max lines and ellipsis of Impeller)
+    const lines = n => ({ maxLines: n, textTruncation: 'ENDING' });
+    if (v.kind === 'subheader') {
+      // no card and no selected look: a label on the list's background. The pressed layer
+      // every row has, without a fill: a tap on a subheader shows nothing.
+      const VALUE_W = Math.round(LI_W * 0.45);
+      rect(s, '#list-item/pressed', 0, 0, LI_W, LI_H, null, 16, { opacity: 0 });
+      text(s, '#list-item/title', 20, 20, LI_W - 40 - VALUE_W - 12, 20, 'SECTION', 14, FONT.semibold, C.ink2, 'LEFT', 'TOP', { opacity: op, ...lines(1) });
+      text(s, '#list-item/trailing-text', LI_W - 20 - VALUE_W, 20, VALUE_W, 20, '3 ITEMS', 14, FONT.medium, C.ink2, 'RIGHT', 'TOP', { opacity: op, ...lines(1) });
+      return;
+    }
     const bg = v.state === 'selected' ? C.accentSoft : C.white;
     rect(s, 'bg', 0, 0, LI_W, LI_H, bg, 16);
     rect(s, '#list-item/pressed', 0, 0, LI_W, LI_H, v.state === 'selected' ? C.accentSoftPressed : C.accentSoft, 16, { opacity: 0 });
@@ -451,13 +472,22 @@ module.exports = function patch(msg, helpers) {
       frame(clip, '#list-item/image', 0, 0, iw, ih, { fillPaints: [A.solid(C.line)] });
       tx = 16 + iw + 16;
     }
+    // the leading text: a strong line over a dim one, and the bar in the colour the code sets: a
+    // plain frame in a clip with the corners (harry draws a picture, the colour, on a plain
+    // rectangle only); the design's accent until the code sets one
+    if (v.kind === 'leading-text') {
+      text(s, '#list-item/leading-title', 20, 14, LEAD_W, 24, '12:30', 15, FONT.semibold, C.ink, 'LEFT', 'TOP', { opacity: op, ...lines(1) });
+      text(s, '#list-item/leading-subtitle', 20, 40, LEAD_W, 20, '30 min', 13, FONT.regular, C.ink2, 'LEFT', 'TOP', { opacity: op, ...lines(1) });
+      const clip = frame(s, 'accent-clip', 20 + LEAD_W + 12, 14, ACCENT_W, LI_H - 28, { cornerRadius: ACCENT_W / 2, frameMaskDisabled: false, opacity: op });
+      frame(clip, '#list-item/accent', 0, 0, ACCENT_W, LI_H - 28, { fillPaints: [A.solid(C.accent)] });
+      tx = 20 + LEAD_W + 12 + ACCENT_W + 12;
+    }
     // the trailing end: an icon slot (shown or hidden by code) before the toggle / chevron, or
-    // with an image the trailing text (a source and an age) at the headline's line
+    // with an image the trailing text (a source and an age) at the headline's line; a leading
+    // text has none, its texts reach the row's end
     const TT_W = 56, VALUE_W = Math.round(LI_W * 0.45);
     const trailingX = v.kind === 'text' ? LI_W - 20 - VALUE_W : v.kind === 'toggle' ? LI_W - 16 - 68 - 12 - 24 : v.kind === 'chevron' ? LI_W - 28 - 12 - 24 : v.kind === 'image' ? LI_W - 16 - TT_W : LI_W - 20 - 24;
-    const textW = trailingX - 12 - tx;
-    // a text longer than its lines ends in an ellipsis (harry: max lines and ellipsis of Impeller)
-    const lines = n => ({ maxLines: n, textTruncation: 'ENDING' });
+    const textW = (v.kind === 'leading-text' ? LI_W - 20 + 12 : trailingX) - 12 - tx;
     if (v.lines === 'one') {
       text(s, '#list-item/title', tx, 0, textW, LI_H, 'Living room lights', 17, FONT.medium, C.ink, 'LEFT', 'CENTER', { opacity: op, ...lines(1) });
     } else if (tall) {
@@ -604,6 +634,8 @@ module.exports = function patch(msg, helpers) {
   g('#input-field', 'state=error', '#ui/input-error', 900, 680);
   ['plain', 'icon', 'toggle', 'chevron'].forEach((kind, i) => g('#list-item', `state=default, kind=${kind}, lines=two, size=regular`, `#ui/list-item-${i + 1}`, 900, 160 + i * 88));
   g('#list-item', 'state=default, kind=image, lines=three, size=regular', '#ui/list-item-image', 1380, 160);
+  g('#list-item', 'state=default, kind=subheader, lines=one, size=regular', '#ui/list-item-subheader', 1380, 300);
+  g('#list-item', 'state=default, kind=leading-text, lines=two, size=regular', '#ui/list-item-leading-text', 1380, 356);
 
   ICON_GLYPHS.forEach((name, i) => g('#icon', `icon=${name}`, `#ui/icon-${name}`, 80 + i * 40, 1000));
   g('#scrollbar', 'state=default', '#ui/scrollbar', 1860, 0);
@@ -648,9 +680,11 @@ module.exports = function patch(msg, helpers) {
   // (#icon-button minus and plus around the value), image (a picture area, a camera). The
   // symbol slot holds every #symbol glyph stacked at opacity 0, the code lights one (harry does
   // not swap a variant inside a clone). The whole tile is a touch target: it opens the device.
-  heading(80, 9140, 'Tile');
+  // below the list items, whose set grows with their kinds
+  const TILE_Y = Math.ceil(liSet.set.transform.m12 + liSet.set.size.y) + 140;
+  heading(80, TILE_Y, 'Tile');
   const TILE_W = 438, TILE_H = 248, TP = 24, TILE_KINDS = ['toggle', 'slider', 'segmented', 'stepper', 'image'];
-  componentSet(lib, '#tile', 80, 9140, [['kind', TILE_KINDS], ['state', ['default', 'disabled']]], TILE_W, TILE_H, 24, 24, (s, v) => {
+  componentSet(lib, '#tile', 80, TILE_Y, [['kind', TILE_KINDS], ['state', ['default', 'disabled']]], TILE_W, TILE_H, 24, 24, (s, v) => {
     const op = v.state === 'disabled' ? 0.45 : 1, CY = TILE_H - TP - 56;
     rect(s, 'bg', 0, 0, TILE_W, TILE_H, C.white, 32, { opacity: 0.44 });
     rect(s, '#tile/pressed', 0, 0, TILE_W, TILE_H, C.accentSoft, 32, { opacity: 0 });
