@@ -17,7 +17,19 @@ pub struct Follow {
     started: Option<Instant>,
     duration: Duration,
     easing: Option<Easing>,
+    /// The frame that set off the running animation, until the next frame starts its clock
+    /// (`LATE`).
+    set_off: Option<Instant>,
 }
+
+/// The first frame of an animation that comes later than this after the frame that set it off
+/// is late (two periods of a 60 Hz display). The time over it is taken out of the animation:
+/// a heavy frame that starts it (a new tree, a first drawing) delays it instead of cutting its
+/// start off. Android starts an animation's clock at its first frame for the same reason
+/// (ValueAnimator.doAnimationFrame: "First frame", mStartTime = frameTime). Only the first
+/// frame: a late frame later in the animation is not held, so on a slow display the value keeps
+/// the time of its transition, as harry's own transitions do.
+pub const LATE: Duration = Duration::from_millis(34);
 
 /// How far the spring has come at the end of its transition, in units of its natural period
 /// (omega * duration): at 8 the unnormalized curve is within 0.3 % of its target.
@@ -52,7 +64,10 @@ impl Follow {
                 self.target = target;
                 return (target, false);
             }
-            Some(_) => self.value_at(now),
+            Some(_) => {
+                self.start_clock(now);
+                self.value_at(now)
+            }
         };
         if target != self.target {
             self.from = shown;
@@ -61,10 +76,21 @@ impl Follow {
             self.started = Some(now + transition.map(|t| t.delay).unwrap_or_default());
             self.duration = transition.map(|t| t.duration).unwrap_or_default();
             self.easing = transition.map(|t| t.easing);
+            self.set_off = Some(now);
         }
         let value = self.value_at(now);
         self.shown = Some(value);
         (value, value != self.target)
+    }
+
+    /// The first frame after the one that set off an animation: moves the animation's start by
+    /// the time this frame is late (`LATE`).
+    fn start_clock(&mut self, now: Instant) {
+        let (Some(set_off), Some(started)) = (self.set_off.take(), self.started) else { return };
+        let late = now.saturating_duration_since(set_off).saturating_sub(LATE);
+        if !late.is_zero() {
+            self.started = Some(started + late);
+        }
     }
 
     fn value_at(&self, now: Instant) -> f32 {
@@ -91,6 +117,16 @@ mod tests {
         Some(Transition { duration: Duration::from_millis(ms), easing: Easing::Linear, delay: Duration::ZERO })
     }
 
+    /// Steps `f` towards `target` frame by frame (every 10 ms) from `from` to `to` ms after
+    /// `t0`, as a screen does, and returns the last step.
+    fn frames(f: &mut Follow, target: f32, transition: Option<Transition>, t0: Instant, from: u64, to: u64) -> (f32, bool) {
+        let mut last = (0.0, false);
+        for ms in (from..=to).step_by(10) {
+            last = f.step(target, transition, t0 + Duration::from_millis(ms));
+        }
+        last
+    }
+
     #[test]
     fn first_value_at_once_then_moves() {
         let t0 = Instant::now();
@@ -98,9 +134,42 @@ mod tests {
         assert_eq!(f.step(0.0, tr(200), t0), (0.0, false));
         let (v, moving) = f.step(100.0, tr(200), t0);
         assert_eq!((v, moving), (0.0, true));
-        let (v, moving) = f.step(100.0, tr(200), t0 + Duration::from_millis(100));
+        let (v, moving) = frames(&mut f, 100.0, tr(200), t0, 10, 100);
         assert!((v - 50.0).abs() < 0.5 && moving);
-        assert_eq!(f.step(100.0, tr(200), t0 + Duration::from_millis(250)), (100.0, false));
+        assert_eq!(frames(&mut f, 100.0, tr(200), t0, 110, 250), (100.0, false));
+    }
+
+    #[test]
+    fn only_the_first_frame_of_an_animation_is_held() {
+        let t0 = Instant::now();
+        let mut f = Follow::default();
+        f.step(0.0, tr(200), t0);
+        f.step(100.0, tr(200), t0);
+        // frames of 50 ms (20 fps) after a first one in time: the animation keeps its 200 ms
+        let (v, _) = frames(&mut f, 100.0, tr(200), t0, 10, 10);
+        assert!((v - 5.0).abs() < 0.5, "{v}");
+        let mut last = (v, true);
+        for ms in [60, 110, 160] {
+            last = f.step(100.0, tr(200), t0 + Duration::from_millis(ms));
+        }
+        assert!((last.0 - 80.0).abs() < 0.5 && last.1, "{last:?}");
+        assert_eq!(f.step(100.0, tr(200), t0 + Duration::from_millis(210)), (100.0, false));
+    }
+
+    #[test]
+    fn a_late_frame_delays_the_animation_instead_of_cutting_it() {
+        let t0 = Instant::now();
+        let mut f = Follow::default();
+        f.step(0.0, tr(200), t0);
+        assert_eq!(f.step(100.0, tr(200), t0), (0.0, true));
+        // the frame that started the animation took 160 ms (a new tree): the next one shows
+        // the animation one late-frame limit in, not 80 % in
+        let (v, moving) = f.step(100.0, tr(200), t0 + Duration::from_millis(160));
+        assert!((v - 100.0 * LATE.as_secs_f32() / 0.2).abs() < 0.5 && moving, "{v}");
+        // from there it runs its whole time: done 200 - 34 ms later, not before
+        let (v, moving) = frames(&mut f, 100.0, tr(200), t0, 170, 310);
+        assert!(v < 100.0 && moving, "{v}");
+        assert_eq!(frames(&mut f, 100.0, tr(200), t0, 320, 330), (100.0, false));
     }
 
     #[test]
@@ -109,7 +178,7 @@ mod tests {
         let mut f = Follow::default();
         f.step(0.0, tr(200), t0);
         f.step(100.0, tr(200), t0);
-        f.step(100.0, tr(200), t0 + Duration::from_millis(100));
+        frames(&mut f, 100.0, tr(200), t0, 10, 100);
         let (v, _) = f.step(0.0, tr(200), t0 + Duration::from_millis(100));
         assert!((v - 50.0).abs() < 0.5);
     }
@@ -142,10 +211,10 @@ mod tests {
         let mut f = Follow::default();
         f.step(0.0, wait, t0);
         assert_eq!(f.step(100.0, wait, t0), (0.0, true));
-        assert_eq!(f.step(100.0, wait, t0 + Duration::from_millis(40)), (0.0, true));
-        let (v, moving) = f.step(100.0, wait, t0 + Duration::from_millis(100));
+        assert_eq!(frames(&mut f, 100.0, wait, t0, 10, 40), (0.0, true));
+        let (v, moving) = frames(&mut f, 100.0, wait, t0, 50, 100);
         assert!((v - 50.0).abs() < 0.5 && moving, "{v}");
-        assert_eq!(f.step(100.0, wait, t0 + Duration::from_millis(150)), (100.0, false));
+        assert_eq!(frames(&mut f, 100.0, wait, t0, 110, 150), (100.0, false));
     }
 
     #[test]
@@ -155,7 +224,7 @@ mod tests {
         let mut f = Follow::default();
         f.step(100.0, jump, t0);
         assert_eq!(f.step(0.0, jump, t0), (100.0, true));
-        assert_eq!(f.step(0.0, jump, t0 + Duration::from_millis(200)), (100.0, true));
-        assert_eq!(f.step(0.0, jump, t0 + Duration::from_millis(301)), (0.0, false));
+        assert_eq!(frames(&mut f, 0.0, jump, t0, 10, 200), (100.0, true));
+        assert_eq!(frames(&mut f, 0.0, jump, t0, 210, 310), (0.0, false));
     }
 }
