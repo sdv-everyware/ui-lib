@@ -23,6 +23,7 @@ pub mod keyboard;
 pub mod keyboard_dock;
 pub mod list_item;
 pub mod overlay;
+pub mod pages;
 pub mod radio;
 pub mod scrollbar;
 pub mod segmented;

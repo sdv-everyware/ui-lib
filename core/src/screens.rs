@@ -1,8 +1,9 @@
-//! The screens behind tabs, and how they switch. The time of a switch is components.json's
-//! (tabs/switch); what moves is the effect: per screen an opacity (0..100) and an offset from
-//! where the design puts it, each with its own transition. A screen at opacity 0 is not drawn
-//! and takes no taps (harry skips the subtree). An app draws its screens with
-//! FollowOpacity/FollowPosition, so a switch is display only: no tree rebuild.
+//! The screens behind tabs, the pages that take turns without them, and how they switch. The
+//! time of a switch is components.json's (tabs/switch, pages/switch); what moves is the effect:
+//! per screen an opacity (0..100) and an offset from where the design puts it, each with its own
+//! transition. A screen at opacity 0 is not drawn and takes no taps (harry skips the subtree). An
+//! app draws its screens with FollowOpacity/FollowPosition, so a switch is display only: no tree
+//! rebuild.
 //!
 //! A new animation is one more effect here, with its test: the tabs and the apps stay as they
 //! are, the app names the effect in one place.
@@ -80,7 +81,7 @@ impl Effect {
 /// Pages that take turns in one place without tabs: a sheet's settings and the list one of its
 /// rows opens, as Android's Settings goes one page deeper and Back comes back (Material 3's shared
 /// axis: Effect::Slide). Which page shows and which showed before; the effect places every page.
-/// The switch takes the tabs' time (components.json, tabs/switch).
+/// The switch takes its time from components.json (pages/switch, as the tabs' screens).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Pages {
     /// The page that shows.
@@ -104,9 +105,9 @@ impl Pages {
         *self = Pages::default();
     }
 
-    /// The time of a switch: the tabs'.
+    /// The time of a switch (components.json, pages/switch).
     pub fn switch_transition() -> Option<Transition> {
-        transitions::transition(ComponentKind::Tabs, Change::Switch)
+        transitions::transition(ComponentKind::Pages, Change::Switch)
     }
 
     /// Where page `page` goes with this effect; `width` is the distance between two pages of a
