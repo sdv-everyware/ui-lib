@@ -58,10 +58,13 @@ use std::time::{Duration, Instant};
 
 /// The id of the one item of a slot; harry names the clone "<slot>@$List-<id>".
 const ITEM_ID: &str = "c";
-/// The id prefix of the rows of a list slot: "r0", "r1", ...
+/// The id prefix of the rows of a list slot (`rows`) and the cells of a grid: "r0", "r1", ...
 const ROW_ID: &str = "r";
-/// A row partly scrolled under the slot's top edge still takes taps up to this much (px).
-const ROW_SLACK: f32 = 24.0;
+/// The id prefix of the rows of a scrolling list (`list`): "s0", "s1", ... A row scrolled partly
+/// out of its slot reaches over what lies beside the list (harry hits by bounds, without
+/// clipping), so `Input` takes a touch on one only where its slot is under the finger too
+/// (`list_row_slot`).
+const LIST_ROW_ID: &str = "s";
 /// How far a ribbon (a horizontal list) lifts its chosen card, in pixels; its slot is that
 /// much higher than a card.
 pub const RIBBON_LIFT: f32 = 20.0;
@@ -95,9 +98,21 @@ pub fn clone_name(slot: &str) -> String {
     format!("{slot}{CLONE_MARK}{ITEM_ID}")
 }
 
-/// The node name of row `row` of the list in `slot`.
+/// The node name of row `row` of the fixed list (`rows`) or the grid in `slot`.
 pub fn row_name(slot: &str, row: usize) -> String {
     format!("{slot}{CLONE_MARK}{ROW_ID}{row}")
+}
+
+/// The node name of row `row` of the scrolling list (`list`) in `slot`.
+pub fn list_row_name(slot: &str, row: usize) -> String {
+    format!("{slot}{CLONE_MARK}{LIST_ROW_ID}{row}")
+}
+
+/// The slot of a row of a scrolling list, for a node name harry reports ("<slot>@$List-s<row>");
+/// None for every other node.
+pub(crate) fn list_row_slot(node: &str) -> Option<&str> {
+    let (slot, id) = node.split_once(CLONE_MARK)?;
+    id.strip_prefix(LIST_ROW_ID)?.parse::<usize>().ok().map(|_| slot)
 }
 
 /// The row of the list in `slot` a gesture's node names ("<slot>/<row>", as the input reports a
@@ -124,7 +139,7 @@ pub fn part_of<'a>(slot: &str, node: &'a str) -> Option<&'a str> {
 /// slot, a row of a list slot "<slot>/<row>", any other name stays.
 pub fn slot_of(node: &str) -> String {
     match node.split_once(CLONE_MARK) {
-        Some((slot, id)) => match id.strip_prefix(ROW_ID).and_then(|r| r.parse::<usize>().ok()) {
+        Some((slot, id)) => match id.strip_prefix(ROW_ID).or_else(|| id.strip_prefix(LIST_ROW_ID)).and_then(|r| r.parse::<usize>().ok()) {
             Some(row) => format!("{slot}/{row}"),
             None => slot.to_string(),
         },
@@ -314,6 +329,13 @@ impl ComponentItem {
         self
     }
 
+    /// Row `row` of a scrolling list, named apart from the rows of a fixed list
+    /// (`list_row_slot`).
+    fn list_row(mut self, row: usize) -> Self {
+        self.id = format!("{LIST_ROW_ID}{row}");
+        self
+    }
+
     /// A row of a scrolling list: `scroll` moves it, `view_h` is the slot's height, `pitch`
     /// what the row takes of the list.
     fn scrolled(mut self, scroll: Scroll, view_h: f32, pitch: f32) -> Self {
@@ -433,15 +455,16 @@ impl Customizer<Slot> for SlotCustomizer {
                     (false, false) => (item.position.0, item.position.1 - scrolled),
                 };
                 c.set_node_position_override(root.clone(), NodePositionOverride::new(Some(x), Some(y)));
-                // the row's place along the list, for the hit test below
+                // the row's place along the list
                 let y = if item.horizontal { x } else { y };
-                // harry hits by bounds without clipping: a row scrolled out of the slot
-                // takes no taps.
-                let shown = item.thumb.is_some() || scroll.map_or(true, |(_, view_h)| y > -ROW_SLACK && y < view_h);
-                c.set_interactive(root.clone(), shown && item.taps && item.shown != Some(false));
                 // A row out of its slot is not drawn: at opacity 0 harry skips its subtree, in
                 // its own passes and in the display list. Most rows of a long list are out.
                 let in_view = item.thumb.is_some() || scroll.map_or(true, |(_, view_h)| y + item.extent > 0.0 && y < view_h);
+                // A row takes taps while some of it is in the slot, however high it is. harry
+                // hits by bounds without clipping, so the part of a row out of the slot lies over
+                // what is beside the list: `Input` takes a touch on a row only where the slot is
+                // under the finger too, and a touch beside the list goes on to what is there.
+                c.set_interactive(root.clone(), in_view && item.taps && item.shown != Some(false));
                 match (in_view, item.shown) {
                     (false, _) => c.set_opacity(root.clone(), 0.0),
                     (true, Some(on)) => c.set_opacity(root.clone(), if on { 1.0 } else { 0.0 }),
@@ -591,22 +614,29 @@ pub fn rows<'a, C: Slotted + 'a>(slot: &str, components: impl IntoIterator<Item 
 /// clips: every row at its y minus the scroll of the frame; a fling moves the rows frame by
 /// frame from here. Taps come as "<slot>/<row>".
 pub fn list<R: Row + Slotted>(slot: &str, view: &ListView<R>) -> Slot {
-    let (pitch, scroll, view_h) = (view.pitch(), view.scroll(), view.view_h());
+    let (scroll, view_h) = (view.scroll(), view.view_h());
+    // where each row starts: the rows before it, each with its extent (ListView::offset)
+    let mut at = 0.0;
     List::new(
         view.rows()
             .iter()
             .enumerate()
             .map(|(row, component)| {
+                let (offset, extent) = (at, view.extent(row));
+                at += extent;
                 let item = ComponentItem::new(slot, R::SET, component.variant());
                 // a ribbon lifts its chosen card (harry has no scale: the card moves up instead)
                 let item = if view.is_horizontal() {
-                    item.row_x(row, row as f32 * pitch).lifted(if component.is_selected() { RIBBON_LIFT } else { 0.0 })
+                    item.row_x(row, offset).lifted(if component.is_selected() { RIBBON_LIFT } else { 0.0 })
                 } else {
-                    item.row(row, row as f32 * pitch)
+                    item.row(row, offset)
                 };
                 let item = item
-                    .scrolled(scroll, view_h, pitch)
+                    .list_row(row)
+                    .scrolled(scroll, view_h, extent)
                     .animation(animation(component.transition()));
+                // a row that takes no tap (a subheader): the touch goes to the list slot below it
+                let item = if component.takes_taps() { item } else { item.passive() };
                 component.parts(item)
             })
             .collect(),
@@ -667,8 +697,9 @@ impl Slotted for Radio {
 
 impl Slotted for ListRow {
     const SET: &'static str = "#list-item";
-    /// Title, subtitle, the pressed layer, the two icon slots, and with an image the picture
-    /// (a registered image; an unknown key keeps the placeholder) and the trailing text. A row
+    /// Title, subtitle, the pressed layer, the two icon slots, with an image the picture (a
+    /// registered image; an unknown key keeps the placeholder) and the trailing text, with a
+    /// leading text its two lines and the bar's colour (a picture of the colour). A row
     /// names only the parts its kind and lines have: every part costs on every frame (a text,
     /// a meter, a name), in every row, also in the rows nobody sees.
     ///
@@ -680,8 +711,20 @@ impl Slotted for ListRow {
         if self.lines != ListItemLines::One {
             item = item.text("#list-item/subtitle", self.subtitle.clone()).optional("#list-item/subtitle");
         }
-        if matches!(self.kind, ListItemKind::Image | ListItemKind::Text) {
+        if matches!(self.kind, ListItemKind::Image | ListItemKind::Text | ListItemKind::Subheader) {
             item = item.text("#list-item/trailing-text", self.trailing_text.clone()).optional("#list-item/trailing-text");
+        }
+        if self.kind == ListItemKind::LeadingText {
+            item = item
+                .text("#list-item/leading-title", self.leading_title.clone())
+                .text("#list-item/leading-subtitle", self.leading_subtitle.clone())
+                .optional("#list-item/leading-title")
+                .optional("#list-item/leading-subtitle")
+                .optional("#list-item/accent");
+            // the bar's colour: a picture of it on the plain frame (harry sets no fill)
+            if let Some(color) = self.accent.and_then(crate::images::color) {
+                item = item.image("#list-item/accent", color);
+            }
         }
         if self.kind == ListItemKind::Image {
             item = item.optional("#list-item/image");
@@ -998,7 +1041,7 @@ mod tests {
         let RenderCustomization::ListCustomization(list) = &output.result else {
             panic!("a list formats to a list customization")
         };
-        list.items()[row].render_customization().get(&row_name(slot, row)).and_then(|c| c.get_opacity())
+        list.items()[row].render_customization().get(&list_row_name(slot, row)).and_then(|c| c.get_opacity())
     }
 
     #[test]
@@ -1069,6 +1112,44 @@ mod tests {
     }
 
     #[test]
+    fn a_leading_text_sets_its_lines_and_its_accent_and_a_subheader_its_trailing_text() {
+        let _one = crate::images::TEST_STORE.lock().unwrap_or_else(|e| e.into_inner());
+        let has = |parts: &[String], part: &str| parts.iter().any(|p| p == part);
+        let lead = ListRow::new(ListItemKind::LeadingText, "Stand-up", "Room 2").leading_text("8:30", "30 min").accent(0x0b8043);
+        let parts = row_parts(&lead);
+        for part in ["#list-item/leading-title", "#list-item/leading-subtitle", "#list-item/accent", "#list-item/title", "#list-item/subtitle"] {
+            assert!(has(&parts, part), "leading text: {part} missing in {parts:?}");
+        }
+        assert!(!has(&parts, "#list-item/trailing-text") && !has(&parts, "#list-item/leading"));
+        let out = SlotCustomizer::default().format(slot("#r", &lead));
+        let c = item_of(&out);
+        assert_eq!(c.get("#list-item/leading-title").and_then(|c| c.get_text()).map(String::as_str), Some("8:30"));
+        let accent = c.get("#list-item/accent").and_then(|c| c.get_image_content()).expect("the bar's colour");
+        assert_eq!(accent.id, crate::images::color(0x0b8043).unwrap().id);
+        // no colour: the design's accent, no picture
+        let plain = SlotCustomizer::default().format(slot("#r", &ListRow::new(ListItemKind::LeadingText, "A", "")));
+        assert!(item_of(&plain).get("#list-item/accent").and_then(|c| c.get_image_content()).is_none());
+
+        let head = row_parts(&ListRow::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items"));
+        assert!(has(&head, "#list-item/title") && has(&head, "#list-item/trailing-text") && has(&head, "#list-item/pressed"));
+        assert!(!has(&head, "#list-item/subtitle") && !has(&head, "#list-item/trailing"));
+    }
+
+    #[test]
+    fn a_row_with_its_own_pitch_moves_the_rows_after_it() {
+        let rows = [
+            ListRow::new(ListItemKind::Subheader, "A", "").pitch(48.0),
+            ListRow::new(ListItemKind::Plain, "Row 1", ""),
+            ListRow::new(ListItemKind::Plain, "Row 2", ""),
+        ];
+        let view = ListView::new(rows, 400.0, 80.0);
+        let out = SlotCustomizer::default().format(list("#l", &view));
+        let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+        let y = |row: usize| l.items()[row].render_customization().get(&list_row_name("#l", row)).unwrap().get_node_position_override().unwrap().y();
+        assert_eq!((y(0), y(1), y(2)), (Some(0.0), Some(48.0), Some(128.0)));
+    }
+
+    #[test]
     fn a_stack_without_a_glyph_is_off_as_a_whole() {
         let row = ListRow::new(ListItemKind::Icon, "Home", "").leading("wifi");
         let out = SlotCustomizer::default().format(slot("#r", &row));
@@ -1108,6 +1189,11 @@ mod tests {
         assert_eq!(slot_of("#kbd/r1/1"), "#kbd/r1/1");
         assert_eq!(slot_of(&row_name("#wifi/networks", 3)), "#wifi/networks/3");
         assert_eq!(row_of("#wifi/networks", &slot_of(&row_name("#wifi/networks", 3))), Some(3));
+        // a row of a scrolling list: the same name for the app, and its slot for Input
+        assert_eq!(slot_of(&list_row_name("#wifi/networks", 3)), "#wifi/networks/3");
+        assert_eq!(list_row_slot(&list_row_name("#wifi/networks", 3)), Some("#wifi/networks"));
+        assert_eq!(list_row_slot(&row_name("#wifi/networks", 3)), None, "a fixed list's row is in its slot");
+        assert_eq!((list_row_slot(&clone_name("#wifi/connect")), list_row_slot("#wifi/networks")), (None, None));
         assert_eq!(row_of("#wifi/networks", "#wifi/networks"), None);
         assert_eq!(row_of("#wifi/networks", "#wifi/networks-scrollbar"), None);
     }
@@ -1126,6 +1212,9 @@ mod tests {
             // a row without a glyph: its trailing stack is off as a whole, by its frame
             slot("#s", &ListRow::new(ListItemKind::Plain, "Amsterdam", "GMT+01:00 · Europe").lines(ListItemLines::Two).size(ListItemSize::Panel)),
             slot("#s", &ListRow::new(ListItemKind::Image, "Headline", "Supporting").lines(ListItemLines::Three).size(ListItemSize::Column).image("k").trailing_text("1 h")),
+            slot("#s", &ListRow::new(ListItemKind::LeadingText, "Headline", "Supporting").leading_text("8:30", "30 min").size(ListItemSize::Column)),
+            slot("#s", &ListRow::new(ListItemKind::LeadingText, "A headline of three lines", "Supporting").lines(ListItemLines::Four).size(ListItemSize::Regular)),
+            slot("#s", &ListRow::new(ListItemKind::Subheader, "Section", "").trailing_text("3 items").size(ListItemSize::Column)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::Close)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
             slot("#s", &Segmented::new(["Low", "Med", "High"])),
@@ -1182,6 +1271,72 @@ mod tests {
         let path = dir.join("data/library.dcf");
         assert!(path.exists(), "{} missing; set LIBRARY_DCF", path.display());
         path
+    }
+
+    #[test]
+    fn a_row_is_as_high_as_the_code_takes_it() {
+        let sizes = crate::design::Sizes::load(dcf()).expect("library.dcf");
+        let mut rows = vec![
+            ListRow::new(ListItemKind::Subheader, "Section", "").size(ListItemSize::Column),
+            ListRow::new(ListItemKind::Plain, "A", "B"),
+            ListRow::new(ListItemKind::Image, "A", "B").lines(ListItemLines::Three),
+        ];
+        rows.extend((1..=6).map(|n| ListRow::new(ListItemKind::LeadingText, "A", "B").lines(ListItemLines::with_headline(n)).size(ListItemSize::Column)));
+        for row in rows {
+            assert_eq!(sizes.height("#list-item", &row.variant()), Some(row.height()), "{}", row.variant());
+        }
+    }
+
+    #[test]
+    fn a_subheader_in_a_list_takes_no_tap() {
+        let rows = [ListRow::new(ListItemKind::Subheader, "A", "").pitch(56.0), ListRow::new(ListItemKind::Plain, "Row", "")];
+        let out = SlotCustomizer::default().format(list("#l", &ListView::new(rows, 400.0, 80.0)));
+        let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+        let taps = |row: usize| l.items()[row].render_customization().get(&list_row_name("#l", row)).and_then(|c| c.is_interactive());
+        assert_eq!((taps(0), taps(1)), (Some(false), Some(true)));
+        // a passive row neither
+        let rows = [ListRow::new(ListItemKind::Plain, "Nothing found", "").passive(), ListRow::new(ListItemKind::Plain, "Row", "")];
+        let out = SlotCustomizer::default().format(list("#l", &ListView::new(rows, 400.0, 80.0)));
+        let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+        let taps = |row: usize| l.items()[row].render_customization().get(&list_row_name("#l", row)).and_then(|c| c.is_interactive());
+        assert_eq!((taps(0), taps(1)), (Some(false), Some(true)));
+    }
+
+    #[test]
+    fn a_row_takes_taps_while_some_of_it_is_in_the_slot_however_high_it_is() {
+        use everyware_ui_core::gesture::Gesture;
+        use everyware_ui_core::scroller::TOUCH_SLOP;
+        // rows of 182 (a headline of six lines) and 72, 8 between them, in a slot 400 high
+        let tall = || ListRow::new(ListItemKind::LeadingText, "A long title", "Place").lines(ListItemLines::Seven).size(ListItemSize::Column);
+        let short = || ListRow::new(ListItemKind::Plain, "Row", "");
+        let rows = [tall().pitch(190.0), short(), tall().pitch(190.0), short(), short(), short()];
+        let mut view = ListView::new(rows, 400.0, 80.0);
+        let taps = |view: &ListView<ListRow>| {
+            let out = SlotCustomizer::default().format(list("#l", view));
+            let RenderCustomization::ListCustomization(l) = &out.result else { panic!() };
+            (0..6).map(|row| l.items()[row].render_customization().get(&list_row_name("#l", row)).and_then(|c| c.is_interactive())).collect::<Vec<_>>()
+        };
+        // the first row's top `by` under the slot's top edge, by a drag
+        let scrolled = |view: &mut ListView<ListRow>, by: f32| {
+            let now = Instant::now();
+            view.scroll_to(0);
+            view.on(None, Gesture::down(0.0, 300.0), now);
+            view.on(None, Gesture::Move { x: 0.0, y: 300.0 - by - TOUCH_SLOP, inside: false }, now);
+            view.on(None, Gesture::Up { x: 0.0, y: 300.0 - by - TOUCH_SLOP, inside: false, velocity: 0.0, velocity_x: 0.0 }, now);
+            assert_eq!(view.scroll_at(now), by);
+        };
+        // at the top: the third row (at 270, 182 high) reaches 52 under the slot's bottom and
+        // takes taps as the rows above it; the fourth (at 460) is out
+        assert_eq!(taps(&view)[..4], [Some(true), Some(true), Some(true), Some(false)]);
+        // a fling stopped with the first row 30 under the top: 152 of it show, it takes taps
+        scrolled(&mut view, 30.0);
+        assert_eq!(taps(&view)[0], Some(true));
+        // 170 under the top: 12 of it show, still a row to tap
+        scrolled(&mut view, 170.0);
+        assert_eq!(taps(&view)[0], Some(true));
+        // scrolled by its whole pitch: out of the slot, no taps
+        scrolled(&mut view, 190.0);
+        assert_eq!(taps(&view)[..2], [Some(false), Some(true)]);
     }
 
     #[test]
