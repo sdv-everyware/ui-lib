@@ -90,9 +90,10 @@ runs it at every `git commit` and refuses the commit otherwise (everyware's
    presenter, the gesture's arm, sending the event on; everyware_ui_recipes_test compiles and runs
    it), a line in `docs/llms.txt` and a row in the README's table of components; a component
    with a Figma set is in the README's picture too (`docs/readme/gallery.py`, `GROUPS`), and the
-   picture `docs/readme/components.png` is built again and committed with every change of
-   `components.json`, the Library (`design/`, `data/library.dcf`) or the gallery (the commands
-   are at the top of `gallery.py`). The check names a missing one and fails when the site does
+   picture `docs/readme/components.png` is built again and committed, with its hash
+   `docs/readme/components.sum`, whenever the previews it is drawn from change (the commands
+   are at the top of `gallery.py`; `gallery.py --check docs/assets` says whether it is current).
+   The check names a missing one and fails when the site does
    not build. Generated files (`docs/site`, `docs/ai`, `docs/llms-full.txt`) are never committed.
    The skills under `skills/` describe the procedure that changed, if it did.
 4. **The commit itself.** Author `Daniel Georg <passenger6@gmail.com>`, no AI trailer; no user

@@ -1,4 +1,4 @@
-//! everyware_ui: the UI components of the Smart HOme Figma file for harry.
+//! everyware_ui: the EveryWare UI components for harry.
 //!
 //! The components and their logic are in everyware_ui_core (re-exported here). This crate
 //! connects them to harry: touch events become gestures, a component's variant becomes a

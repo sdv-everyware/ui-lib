@@ -1,9 +1,9 @@
 ---
 name: ui-component
-description: Add a new UI component (or a new variant or transition of an existing one) to the Smart HOme component library - components.json spec, Figma component set via the kiwi generator, Rust state machine in everyware_ui_core, harry binding, use in a harry app, fetch and check on the RB3. Use when the user asks to add a button/slider/chip/stepper/... to the UI library, add a state or variant to a component, change a transition, or when a library component does not switch variant or animate on the device.
+description: Add a new UI component (or a new variant or transition of an existing one) to the EveryWare UI component library - components.json spec, Figma component set via the kiwi generator, Rust state machine in everyware_ui_core, harry binding, use in a harry app, fetch and check on the RB3. Use when the user asks to add a button/slider/chip/stepper/... to the UI library, add a state or variant to a component, change a transition, or when a library component does not switch variant or animate on the device.
 ---
 
-# Add a component to the Smart HOme UI library
+# Add a component to the EveryWare UI library
 
 A whole screen, a sheet or an overlay, and how designers see and click it in Figma (visible
 frames, prototype): the figma-design skill (`vendor/sdv-everyware/everyware/skills/figma-design`).
