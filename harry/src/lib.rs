@@ -327,12 +327,21 @@ pub fn stamp(velocity: &Velocity, input: &UserInputEvent) {
 /// is held back too, and taken only when the list's slot comes next: the finger is inside the
 /// list. Another node next means the finger is beside the list: the touch is that node's; no
 /// node next, it is nobody's. A list's slot is `interactive` in the UI model, as it must be for a
-/// drag that starts between the rows.
+/// drag that starts between the rows (a row's touch without its slot is logged once per list).
+///
+/// A touch belongs to the node it started on for its whole life. harry hit-tests every move and
+/// every lift too, so a row lying over that node beside its list comes first again: a move or a
+/// lift on a row of a list the touch did not start in is handed on (NotConsumed, the raw event
+/// after it skipped) to the node below, and the touch stays inside the node it started on.
 #[derive(Debug, Default)]
 pub struct Input {
     tracker: GestureTracker,
     velocity: Option<Velocity>,
     held: Option<Held>,
+    /// A move or a lift handed on past a row of another list: (pointer, raw events seen since).
+    passed: Option<(u64, u8)>,
+    /// The lists a row's touch came without the slot under it (logged once each).
+    unconfirmed: std::collections::HashSet<String>,
 }
 
 /// A touch start held back for the node harry delivers next (see `Input`). harry sends one raw
@@ -362,7 +371,7 @@ fn is_part(node: &str) -> bool {
 impl Input {
     /// An input that knows the finger's speed (see `stamp`).
     pub fn with_velocity(velocity: Velocity) -> Self {
-        Input { tracker: GestureTracker::default(), velocity: Some(velocity), held: None }
+        Input { velocity: Some(velocity), ..Input::default() }
     }
 
     /// Feeds one event from the UiEventListener; returns the gestures, as (node, gesture),
@@ -411,20 +420,50 @@ impl Input {
                     return (Vec::new(), HandleEventStatus::Consumed);
                 }
                 Some(Held { pointer: p, node, list: None, .. }) if p == pointer => node,
+                Some(Held { pointer: p, list: Some(list), .. }) if p == pointer => {
+                    if self.unconfirmed.insert(list.clone()) {
+                        log::warn!("everyware_ui: a touch on a row of {list} came without {list} under it: beside the list, or {list} is not interactive in the UI model, and then no row of it takes a tap");
+                    }
+                    String::new()
+                }
                 _ => String::new(),
             },
+            // a move or a lift on a row of a list the touch did not start in: its part out of the
+            // list lies over the node the touch belongs to, which comes next
+            (_, Some(hit)) if self.foreign_row(pointer, hit) => {
+                self.passed = Some((pointer, 0));
+                return (Vec::new(), HandleEventStatus::NotConsumed);
+            }
             // a move or a lift over the part the touch started on counts as inside it
-            (_, Some(hit)) => match self.tracker.active(pointer) {
-                Some(start) if is_part(hit) && start.ends_with(&format!("/{hit}")) => start.to_string(),
-                _ => slot_of(hit),
+            (_, Some(hit)) => {
+                self.passed = None;
+                match self.tracker.active(pointer) {
+                    Some(start) if is_part(hit) && start.ends_with(&format!("/{hit}")) => start.to_string(),
+                    _ => slot_of(hit),
+                }
+            }
+            // the raw event after a move or a lift handed on is no event of its own; the second
+            // says no node came after the row
+            (_, None) => match self.passed.take() {
+                Some((p, 0)) if p == pointer => {
+                    self.passed = Some((p, 1));
+                    return (Vec::new(), HandleEventStatus::Consumed);
+                }
+                _ => String::new(),
             },
-            (_, None) => String::new(),
         };
         let velocity = match (phase, &self.velocity) {
             (Phase::End, Some(v)) => v.lock().map(|v| (v.velocity_x(), v.velocity())).unwrap_or((0.0, 0.0)),
             _ => (0.0, 0.0),
         };
         (self.tracker.feed(pointer, phase, &node, raw.x as f32, raw.y as f32, velocity), HandleEventStatus::Consumed)
+    }
+
+    /// Whether `hit` is a row of a scrolling list that the touch of `pointer` did not start in
+    /// (its rows or the slot between them).
+    fn foreign_row(&self, pointer: u64, hit: &str) -> bool {
+        let (Some(list), Some(start)) = (list_row_slot(hit), self.tracker.active(pointer)) else { return false };
+        start != list && !start.strip_prefix(list).is_some_and(|rest| rest.starts_with('/'))
     }
 
     /// Holds a touch start back for the node harry delivers next (`Held`).
@@ -596,20 +635,52 @@ mod input_tests {
         // inside the list: harry has the row, then the list's slot under it
         let mut input = Input::default();
         assert_eq!(dispatch(&mut input, &[&row, "#agenda/list"], START, 10.0), vec![("#agenda/list/0".to_string(), Gesture::down(10.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &[&row, "#agenda/list"], MOVE, 11.0), vec![("#agenda/list/0".to_string(), Gesture::Move { x: 11.0, y: 0.0, inside: true })]);
         assert_eq!(dispatch(&mut input, &[&row, "#agenda/list"], END, 12.0), vec![("#agenda/list/0".to_string(), Gesture::up(12.0, 0.0))]);
         // a row scrolled partly out of the list, touched above the list on a control drawn under
-        // it: the control's
+        // it: the control's, from the start to the lift, with the row on top every time
         let mut input = Input::default();
-        assert_eq!(dispatch(&mut input, &[&row, "#status/wifi@$List-c"], START, 10.0), vec![("#status/wifi".to_string(), Gesture::down(10.0, 0.0))]);
-        assert_eq!(dispatch(&mut input, &["#status/wifi@$List-c"], END, 10.0), vec![("#status/wifi".to_string(), Gesture::up(10.0, 0.0))]);
+        let control = ["#status/wifi@$List-c"];
+        let over = [row.as_str(), control[0]];
+        assert_eq!(dispatch(&mut input, &over, START, 10.0), vec![("#status/wifi".to_string(), Gesture::down(10.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &over, MOVE, 11.0), vec![("#status/wifi".to_string(), Gesture::Move { x: 11.0, y: 0.0, inside: true })]);
+        assert_eq!(dispatch(&mut input, &over, END, 12.0), vec![("#status/wifi".to_string(), Gesture::up(12.0, 0.0))]);
+        // a lift that left the control, on the row's part beside the list alone: outside
+        assert_eq!(dispatch(&mut input, &over, START, 10.0), vec![("#status/wifi".to_string(), Gesture::down(10.0, 0.0))]);
+        let up_outside = Gesture::Up { x: 30.0, y: 0.0, inside: false, velocity: 0.0, velocity_x: 0.0 };
+        assert_eq!(dispatch(&mut input, &[&row], END, 30.0), vec![("#status/wifi".to_string(), up_outside)]);
         // above the list where nothing else takes it: nobody's, nor the lift
         let mut input = Input::default();
         assert_eq!(dispatch(&mut input, &[&row], START, 10.0), vec![]);
         assert_eq!(dispatch(&mut input, &[&row], END, 10.0), vec![]);
+        // a touch that starts in the list and leaves it over its own row stays the row's
+        let mut input = Input::default();
+        assert_eq!(dispatch(&mut input, &[&row, "#agenda/list"], START, 10.0), vec![("#agenda/list/0".to_string(), Gesture::down(10.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &[&row], END, 10.0), vec![("#agenda/list/0".to_string(), Gesture::up(10.0, 0.0))]);
         // and a row of another list under it is held for its own slot
         let mut input = Input::default();
         let other = list_row_name("#prefs/zones", 2);
         assert_eq!(dispatch(&mut input, &[&row, &other, "#prefs/zones"], START, 10.0), vec![("#prefs/zones/2".to_string(), Gesture::down(10.0, 0.0))]);
+    }
+
+    #[test]
+    fn back_under_the_top_row_of_a_list_takes_its_tap() {
+        // a settings page: "Back" drawn before the time zones, whose top row is scrolled 40 px
+        // out over it. A tap on Back's lower part: every event has the row on top
+        let mut input = Input::default();
+        let row = list_row_name("#prefs/zones", 3);
+        let back = clone_name("#prefs/back");
+        let nodes = [row.as_str(), back.as_str(), "#prefs/card"];
+        assert_eq!(dispatch(&mut input, &nodes, START, 40.0), vec![("#prefs/back".to_string(), Gesture::down(40.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &nodes, MOVE, 41.0), vec![("#prefs/back".to_string(), Gesture::Move { x: 41.0, y: 0.0, inside: true })]);
+        assert_eq!(dispatch(&mut input, &nodes, END, 41.0), vec![("#prefs/back".to_string(), Gesture::up(41.0, 0.0))]);
+        // the list still scrolls and taps as before
+        let in_list = [row.as_str(), "#prefs/zones", "#prefs/card"];
+        assert_eq!(dispatch(&mut input, &in_list, START, 200.0), vec![("#prefs/zones/3".to_string(), Gesture::down(200.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &in_list, END, 200.0), vec![("#prefs/zones/3".to_string(), Gesture::up(200.0, 0.0))]);
+        // a drag that starts between the rows and moves over a row of the same list stays the list's
+        assert_eq!(dispatch(&mut input, &["#prefs/zones", "#prefs/card"], START, 200.0), vec![("#prefs/zones".to_string(), Gesture::down(200.0, 0.0))]);
+        assert_eq!(dispatch(&mut input, &in_list, MOVE, 150.0), vec![("#prefs/zones".to_string(), Gesture::Move { x: 150.0, y: 0.0, inside: false })]);
     }
 
     #[test]

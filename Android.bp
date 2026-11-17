@@ -54,6 +54,8 @@ rust_library {
         // the design's sizes from the .dcf (src/design.rs)
         "libdc_bundle",
         "libeveryware_ui_core",
+        // a list whose slot takes no taps, said once (Input)
+        "liblog_rust",
     ],
     // ui_model! (src/model.rs): its derives, re-exported for the apps' call sites
     proc_macros: [
@@ -85,6 +87,7 @@ rust_test_host {
         "libhar_types",
         "libimage",
         "libeveryware_ui_core",
+        "liblog_rust",
     ],
     proc_macros: [
         "libderive_customizations",
