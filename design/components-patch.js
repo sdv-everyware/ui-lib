@@ -192,12 +192,23 @@ module.exports = function patch(msg, helpers) {
   };
 
   // ---- Button with text
-  heading(80, 180, 'Button');
   const btnColors = {
     primary: { default: [C.accent, C.white], pressed: [C.accentPressed, C.white], disabled: [C.accentDisabled, C.white] },
     secondary: { default: [C.accentSoft, C.ink], pressed: [C.accentSoftPressed, C.ink], disabled: [C.surface, C.muted] },
     ghost: { default: [null, C.accent], pressed: [C.accentSoft, C.accent], disabled: [null, C.accentDisabled] },
   };
+  // A tone (core tone.rs: success, warning, error) is a kind of its own, <look>-<tone>, so the
+  // default kinds keep their names in every app's design. Primary: the tone's fill, its label
+  // white (ink on the warning's yellow); secondary: the tone's soft fill and its ink; ghost: the
+  // tone's ink. Disabled: as the look without a tone. Every label passes WCAG AA on its fill.
+  const BTN_LOOKS = ['primary', 'secondary', 'ghost'], BTN_TONES = ['success', 'warning', 'error'];
+  for (const t of BTN_TONES) {
+    const onFill = t === 'warning' ? C.ink : C.white;
+    btnColors[`primary-${t}`] = { default: [C[t], onFill], pressed: [C[`${t}Pressed`], onFill], disabled: btnColors.primary.disabled };
+    btnColors[`secondary-${t}`] = { default: [C[`${t}Soft`], C[`${t}Ink`]], pressed: [C[`${t}SoftPressed`], C[`${t}Ink`]], disabled: btnColors.secondary.disabled };
+    btnColors[`ghost-${t}`] = { default: [null, C[`${t}Ink`]], pressed: [C[`${t}Soft`], C[`${t}Ink`]], disabled: btnColors.ghost.disabled };
+  }
+  const BTN_KINDS = [...BTN_LOOKS, ...BTN_TONES.flatMap(t => BTN_LOOKS.map(l => `${l}-${t}`))];
   // Pressed is not a variant (a variant change rebuilds the tree, ~50 ms on the RB3): the
   // #<set>/pressed layer in the pressed colour fades in by opacity (display-only).
   // As Google draws a button (ListTestUI.fig "Button"): a fixed size per variant, the fill and
@@ -205,7 +216,8 @@ module.exports = function patch(msg, helpers) {
   // width is the design's (size=regular 200, compact 116), never the label's: a clone in a
   // slot is exactly the variant, a longer label stays centred.
   const BTN_W = { regular: 200, compact: 116 }, BTN_H = 56;
-  componentSet(lib, '#button', 80, 180, [['kind', ['primary', 'secondary', 'ghost']], ['state', ['default', 'disabled']], ['size', ['regular', 'compact']]], 200, BTN_H, 24, 24, (s, v) => {
+  // 48 variants, a row per kind: the set goes below the others at the end (buttonSet)
+  const buttonSet = componentSet(lib, '#button', 80, 180, [['kind', BTN_KINDS], ['state', ['default', 'disabled']], ['size', ['regular', 'compact']]], 200, BTN_H, 24, 24, (s, v) => {
     const [bg, ink] = btnColors[v.kind][v.state];
     const w = BTN_W[v.size];
     s.size = { x: w, y: BTN_H };
@@ -213,7 +225,7 @@ module.exports = function patch(msg, helpers) {
     s.cornerRadius = BTN_H / 2;
     s.frameMaskDisabled = false;
     rect(s, '#button/pressed', 0, 0, w, BTN_H, btnColors[v.kind].pressed[0] || C.accentSoft, BTN_H / 2, { opacity: 0, ...FILL });
-    text(s, '#button/label', 0, 0, w, BTN_H, 'Button', 17, v.kind === 'primary' ? FONT.semibold : FONT.medium, ink, 'CENTER', 'CENTER', FILL);
+    text(s, '#button/label', 0, 0, w, BTN_H, 'Button', 17, v.kind.startsWith('primary') ? FONT.semibold : FONT.medium, ink, 'CENTER', 'CENTER', FILL);
   }, { cols: 4 });
 
   // ---- Button with icon: as on the dashboard (Smart HOme.fig): a circle in the widget's
@@ -414,8 +426,12 @@ module.exports = function patch(msg, helpers) {
       const on = i === 1;
       const seg = frame(s, `#segmented/segment-${i}`, SEG_PAD + (i - 1) * (w + SEG_GAP), SEG_PAD, w, h, { opacity: op });
       rect(seg, `#segmented/segment-${i}/selected`, 0, 0, w, h, C.accent, h / 2, { opacity: on ? 1 : 0 });
+      // a segment's tone (core tone.rs) lights its own highlight instead of the accent
+      for (const t of ['success', 'warning', 'error']) rect(seg, `#segmented/segment-${i}/selected-${t}`, 0, 0, w, h, C[t], h / 2, { opacity: 0 });
       text(seg, `#segmented/segment-${i}/label`, 0, 0, w, h, SEG_LABELS[i - 1], 14, FONT.medium, C.ink2, 'CENTER', 'CENTER', { opacity: on ? 0 : 1, maxLines: 1, textTruncation: 'ENDING' });
       text(seg, `#segmented/segment-${i}/label-selected`, 0, 0, w, h, SEG_LABELS[i - 1], 14, FONT.medium, C.white, 'CENTER', 'CENTER', { opacity: on ? 1 : 0, maxLines: 1, textTruncation: 'ENDING' });
+      // the label on the warning's yellow: ink, white would not pass WCAG AA there
+      text(seg, `#segmented/segment-${i}/label-selected-ink`, 0, 0, w, h, SEG_LABELS[i - 1], 14, FONT.medium, C.ink, 'CENTER', 'CENTER', { opacity: 0, maxLines: 1, textTruncation: 'ENDING' });
     }
   }, { rows: true });
 
@@ -849,6 +865,10 @@ module.exports = function patch(msg, helpers) {
   // ---- The sets born in Figma: "figma": true and no place given by the code above. Below
   // the others, each with its heading.
   let drawnY = Math.max(...kids(key(lib.guid)).map(n => n.transform.m12 + n.size.y)) + 120;
+  // the button set (48 variants since the tones) below the others, with its heading
+  heading(80, drawnY + 40, 'Button');
+  buttonSet.set.transform = { ...buttonSet.set.transform, m02: 80, m12: drawnY + 40 };
+  drawnY += 40 + buttonSet.set.size.y + 120;
   for (const [id, c] of Object.entries(SPEC.components).filter(([, c]) => c.figma)) {
     const made = figmaSet(c.set);
     if (made.placed) continue;

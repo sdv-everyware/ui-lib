@@ -31,6 +31,7 @@ pub mod symbol;
 pub mod tabs;
 pub mod tile;
 pub mod toggle;
+pub mod tone;
 pub mod transitions;
 
 pub use follow::Follow;

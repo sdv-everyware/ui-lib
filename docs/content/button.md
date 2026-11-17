@@ -73,6 +73,7 @@ pub fn send(command: Command) -> bool {
 - **Tap.** A down and an up on the button is one `Clicked`. A finger that slides off undoes the press; coming back does not restore it, and the up is no tap.
 - **Disabled.** `press.set_enabled(false)` shows `state=disabled` (paler, no press) and the button takes no taps. It switches without an animation.
 - **Label.** The label is the app's and is centred; a longer label does not make the button wider.
+- **Tone.** `.tone(Tone::Error)` draws the button in a colour role, as Material 3's error role, with `Tone::Success` and `Tone::Warning` too: a `primary` button on the tone's fill (its label white, ink on the warning's yellow), a `secondary` one on the tone's soft fill in its ink, a `ghost` one in its ink. Use the error tone for an action that cannot be undone, and keep the default for the others. Every label passes WCAG AA on its fill.
 
 ## From the app
 **What.** The app changes the button from what it knows, without a tap: another label (Talk becomes End during a call), or off while the service is not there.
@@ -94,7 +95,7 @@ pub fn on_call(state: &mut State, in_call: bool, service_up: bool) {
 A slot of the variant's size named `#<screen>/<name>` (`#intercom/talk`, `#wifi/connect`): 200 × 56 for `size=regular` (a sheet's actions), 116 × 56 for `size=compact` (a widget's row). Inside it an instance of `#button`. The instance's label is the designer's preview; the app writes the real one. Two buttons are two slots, never one instance twice.
 
 ## How it works
-`kind` is the look (`primary` filled, `secondary` soft, `ghost` text only), `size` the width, `state` only `default` or `disabled`. Pressed is not a variant: `#button/pressed` is a layer whose opacity the binding fades (display-only in harry, no tree rebuild). The label is `#button/label`. `Button::new(kind, label)` makes a regular one, `.compact()` the narrow one.
+`kind` is the look (`primary` filled, `secondary` soft, `ghost` text only) and its tone: `primary-error`, `secondary-success`, ... (`<look>-<tone>`, a kind of its own so that the plain kinds keep their names in every app's design); `size` the width, `state` only `default` or `disabled` (a disabled toned button looks as its plain look does). Pressed is not a variant: `#button/pressed` is a layer whose opacity the binding fades (display-only in harry, no tree rebuild). The label is `#button/label`. `Button::new(kind, label)` makes a regular one, `.compact()` the narrow one.
 
 ## Traps
 - A label changed at runtime needs the text node named `#button/label` in every variant: a renamed inner layer is lost on a variant swap, a text override is kept.
