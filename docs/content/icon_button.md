@@ -75,7 +75,7 @@ pub fn send(command: Command) -> bool {
 ## How it behaves
 - **Pressed.** While the finger is down the circle darkens: a layer fades in over 80 ms and out over 160 ms. The variant stays.
 - **Tap.** A down and an up on the button is one `Clicked`; a finger that slides off is no tap.
-- **Held.** `press.pressed` is true from the finger's down until it lifts or slides off: a control that acts while it is held (a direction pad, a key that repeats) reads it after every gesture instead of waiting for `Clicked`. Two fingers on two buttons hold both.
+- **Held.** `press.pressed` is true from the finger's down until it lifts or slides off: a control that acts while it is held (a direction pad, a key that repeats) reads it after every gesture instead of waiting for `Clicked`. Two fingers on two buttons hold both, as far as each finger reaches the app as a touch of its own (harry's evdev reader reports one finger per input frame: two that land in the same frame are not both seen).
 - **Disabled.** `press.set_enabled(false)` shows `state=disabled`: a grey glyph on a tonal button, a paler one on glass and scrim. It takes no taps.
 - **Touch target.** The button takes taps on 72 × 72 around a circle of 56 (or 48 for `.compact()`), so a small circle is still easy to hit.
 

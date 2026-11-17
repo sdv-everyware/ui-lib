@@ -269,8 +269,9 @@ module.exports = function patch(msg, helpers) {
     c.transform = at(f.size.x, f.size.y, 180);
     return g;
   };
-  // 24 x 24, the design's has none: Lucide "gamepad", a body of 20 x 12 with round corners, a
-  // cross at the left and two buttons at the right, in the line weight of the design's icons
+  // 24 x 24, the design's has none: Lucide "gamepad" (ISC, NOTICE), a body of 20 x 12 with round
+  // corners, a cross at the left and two buttons at the right, in the line weight of the design's
+  // icons
   const gamepadIcon = (parent, x, y, ink) => {
     const g = frame(parent, 'gamepad', x, y, 24, 24);
     const th = 1.7;
