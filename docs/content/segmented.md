@@ -74,12 +74,13 @@ pub fn send(command: Command) -> bool {
 - **Tap.** A down and an up on the same segment picks it: its accent highlight and white label fade in over 160 ms, the old one's fade out. `Selected(index)`; `value()` is its label.
 - **The chosen segment.** A tap on the segment that is chosen already does nothing. A finger that slides off is no tap.
 - **Disabled.** `press.set_enabled(false)` shows `state=disabled` (paler); the segments take no taps, the choice still shows.
+- **Nothing chosen.** `clear()` lights no segment, for a value that is not known or a choice not made yet: `chosen()` is `None`, `value()` is empty, and every segment takes a tap (the one chosen before too). A tap or `select(index)` chooses one again.
 - **Labels.** The texts are the app's, from `Segmented::new`; a long label is cut with an ellipsis.
 
 ## From the app
 **What.** The app lights the segment the device reported (`select`), and turns the control off while the device is gone.
 
-**Why.** The control must show the fan as it is, also when it changed elsewhere. The state is plain fields: `labels`, `selected`, and `press` for on and off; `select(index)` lights a segment with the transition and ignores an index out of range.
+**Why.** The control must show the fan as it is, also when it changed elsewhere. The state is plain fields: `labels`, `selected`, `cleared`, and `press` for on and off; `select(index)` lights a segment with the transition and ignores an index out of range, `clear()` lights none (a fan that has not reported its speed yet), `chosen()` says which one is lit, if any.
 
 <!-- example: docs/examples/segmented.rs change slot=#office/fan field=fan -->
 ```rust
