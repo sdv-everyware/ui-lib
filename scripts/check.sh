@@ -88,10 +88,7 @@ done
 for set in $(python3 -c "import json; print(' '.join(c['set'][1:] for c in json.load(open('components.json'))['components'].values() if c.get('set', '').startswith('#')))"); do
     grep -q "'$set/" docs/readme/gallery.py || fail "docs/readme/gallery.py: #$set is not in the README's picture (add it to GROUPS, build the picture again)"
 done
-if [ "$1" != --all ] && echo "$changed" | grep -qE '^(components\.json|design/components-patch\.js|design/library\.fig|data/library\.dcf|docs/readme/gallery\.py)$' \
-    && ! echo "$changed" | grep -qx 'docs/readme/components.png'; then
-    fail "the Library or the gallery changed without docs/readme/components.png: build it again (the commands are at the top of docs/readme/gallery.py)"
-fi
+if g=$(python3 docs/readme/gallery.py --check docs/assets 2>&1); then echo "  ok   the README's picture shows the Library as it is"; else fail "$g"; fi
 # a changed component and its docs: the author decides whether they are still right
 if [ "$1" != --all ]; then "$here/changed-components.py" | while read -r line; do note "$line"; done; fi
 # the guides name only things that exist (a renamed fn or layer fails here)

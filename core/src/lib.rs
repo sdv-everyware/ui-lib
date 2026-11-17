@@ -1,4 +1,4 @@
-//! everyware_ui_core: the UI components of the Smart HOme Figma file without harry.
+//! everyware_ui_core: the EveryWare UI components without harry.
 //!
 //! Each component is a small state machine: it takes gestures (down, up, cancel on its node),
 //! says which Figma variant it shows and which change of state led there, and reports what the

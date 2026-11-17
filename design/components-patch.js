@@ -1,4 +1,4 @@
-// components-patch.js: the UI component library of the Smart HOme Figma file, at the kiwi level.
+// components-patch.js: the EveryWare UI component library as a Figma file, at the kiwi level.
 //
 //   node $FIGMA/roundtrip.js <in.fig> <out.fig> $UI/design/components-patch.js     # FIGMA: everyware/design/figma
 //
@@ -52,7 +52,7 @@ module.exports = function patch(msg, helpers) {
   // A top-level frame of the page: the fetch resolves names one level below the pages only
   // (depth=2), so scripts/fetch-dcf.sh fetches "Library" to bring every set along.
   const lib = frame(page, 'Library', 0, 0, 3140, 8700, { fillPaints: [A.solid(C.page)], cornerRadius: 0 });
-  text(lib, 'Title', 80, 48, 1200, 44, 'Smart HOme · Components', 34, FONT.semibold, C.ink);
+  text(lib, 'Title', 80, 48, 1200, 44, 'EveryWare UI · Components', 34, FONT.semibold, C.ink);
   text(lib, 'Subtitle', 80, 96, 1600, 24, 'Component sets for harry: variants are states, switched by the Rust component library. Transitions: table at the bottom.', 17, FONT.regular, C.ink2);
   const heading = (x, y, s) => text(lib, 'Heading', x, y - 40, 800, 28, s, 21, FONT.semibold, C.ink);
 

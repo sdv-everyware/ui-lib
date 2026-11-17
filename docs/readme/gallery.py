@@ -1,8 +1,10 @@
 """Composes the component gallery of the README (docs/readme/components.png) from the Library's
 preview SVGs (docs/assets/<set>/<variant>.svg, built by docs/build-docs.js), with the values the
 code would set: a toggle on, a slider at 65 %, a dropdown closed, a tile's title and symbol. Every
-component with a Figma set is in it, grouped as the README's table; scripts/check.sh fails when a
-set is missing here or when the Library changed and the picture was not built again.
+component with a Figma set is in it, grouped as the README's table. The script also writes
+docs/readme/components.sum, the hash of what the picture is drawn from; scripts/check.sh fails
+when a set is missing here or when the previews no longer give that hash (the Library's look
+changed and the picture was not built again): `gallery.py --check docs/assets`.
 
 From ui-lib's folder:
 
@@ -27,10 +29,12 @@ if sys.argv[1] == '--crop':
     img.crop((0, 0, w, bottom)).save(sys.argv[3], optimize=True)
     sys.exit(0)
 
-A, OUT = sys.argv[1:3]
+CHECK = sys.argv[1] == '--check'
+A, OUT = (sys.argv[2], None) if CHECK else sys.argv[1:3]
+SUM = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'components.sum')
 # the device's font (regular and bold; a medium weight is drawn regular), so that the picture
 # does not fall back to the host's system font
-FONTS = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
+FONTS = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 and not CHECK else None
 
 def load(path):
     return open(os.path.join(A, path)).read()
@@ -128,6 +132,15 @@ faces = ''.join(
     f"@font-face{{font-family:Inter;font-weight:{w};src:url('file://{FONTS}/inter_{n}.otf')}}"
     for n, w in (('regular', '100 599'), ('bold', '600 900'))) if FONTS else ''
 body = ''.join(f'<section><h2>{g}</h2><div class="row">{"".join(items)}</div></section>' for g, items in GROUPS)
+# what the picture shows, without the font's path on this computer
+import hashlib
+digest = hashlib.sha256(body.encode()).hexdigest()
+if CHECK:
+    have = open(SUM).read().strip() if os.path.exists(SUM) else 'none'
+    if have != digest:
+        sys.exit('docs/readme/components.png is older than the previews: build it again '
+                 '(the commands are at the top of docs/readme/gallery.py), commit it with components.sum')
+    sys.exit(0)
 page = f'''<!doctype html><html><head><meta charset="utf-8"><style>{faces}
 body{{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff}}
 .c{{width:1600px;padding:56px 64px 64px;box-sizing:border-box;background:linear-gradient(135deg,#dfe7f3,#eef3f9);display:flex;flex-direction:column;gap:40px}}
@@ -140,3 +153,4 @@ svg{{height:auto;max-width:100%;filter:drop-shadow(0 8px 24px rgba(36,54,76,.12)
 figure.w svg{{width:100%}} figure.flat svg{{filter:none}} figure.screen .p{{background:#9fa9b6;border-radius:6px;overflow:hidden}}
 </style></head><body><div class="c">{body}</div></body></html>'''
 open(OUT, 'w').write(page)
+open(SUM, 'w').write(digest + '\n')
