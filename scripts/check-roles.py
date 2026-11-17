@@ -27,6 +27,8 @@ USE_CASE_WORDS = {
     'vehicle', 'parking', 'speedometer',
     # a calendar
     'calendar', 'agenda', 'appointment', 'meeting',
+    # a game
+    'game', 'doom',
 }
 
 # what breaks the rule today: name -> what replaces it. Remove an entry with its fix.

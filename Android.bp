@@ -5,6 +5,19 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+// Lucide's glyphs in the Library (NOTICE: ISC, with Feather's portions under MIT). A design built
+// on the Library carries them: the module that installs an app's .dcf lists this license, so the
+// image's notices have the text.
+license {
+    name: "everyware_ui_lucide_license",
+    visibility: ["//visibility:public"],
+    license_kinds: [
+        "SPDX-license-identifier-ISC",
+        "SPDX-license-identifier-MIT",
+    ],
+    license_text: ["NOTICE"],
+}
+
 rust_defaults {
     name: "everyware_ui_core_defaults",
     crate_name: "everyware_ui_core",
