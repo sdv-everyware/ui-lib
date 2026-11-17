@@ -2,7 +2,7 @@
 // the Figma file's own data (the kiwi message), not by Figma's servers: their render drops the
 // texts of a generated file (no derived text layout in it). Run through the kiwi round trip:
 //
-//   node ../everyware/design/figma/roundtrip.js design/build/library.fig /tmp/x.fig docs/render-previews.js
+//   node ../everyware/design/figma/roundtrip.js design/library.fig /tmp/x.fig docs/render-previews.js
 //   (from ui-lib, after design/build-library.sh; docs/build-docs.js runs both when the SVGs are missing)
 //
 // Draws what the generators draw: frames and symbols (fill, corners, shadow, clip), rectangles,

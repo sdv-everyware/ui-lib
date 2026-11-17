@@ -41,7 +41,7 @@ function previews() {
   fs.rmSync(ASSETS, { recursive: true, force: true });
   const out = path.join(require('os').tmpdir(), `everyware-previews-${process.pid}.fig`);
   try {
-    execFileSync('node', [path.join(figma, 'roundtrip.js'), path.join(design, 'build', 'library.fig'), out,
+    execFileSync('node', [path.join(figma, 'roundtrip.js'), path.join(design, 'library.fig'), out,
       path.join(__dirname, 'render-previews.js')], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
   } finally { fs.rmSync(out, { force: true }); }
 }

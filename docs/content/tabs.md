@@ -81,7 +81,7 @@ _ if part_of("#home/tabs", node).is_some() => {
 
 ## How it behaves
 - **Tap.** A tap on another tab lights its pill and its label in the accent; the screen switches in `tabs`/`switch` of components.json (300 ms). A tap on the chosen tab does nothing.
-- **Effects.** `Effect::Fade` (the default) crossfades the two screens. `Effect::FadeThrough` lets the old screen go in the first 30 % and brings the new one after it. `Effect::Slide` lays the screens side by side in the tabs' order and slides by one screen width per tab. `Effect::None` switches at once. To pick another one, change `EFFECT`: the tabs and the screens stay as they are.
+- **Effects.** `Effect::Fade` (the default) crossfades the two screens. `Effect::FadeThrough` lets the old screen go in the first 30 % and brings the new one after it. `Effect::Slide` lays the screens side by side in the tabs' order: the new screen comes one width from its side, the old one leaves one width to the other side, whatever tabs lie between. `Effect::None` switches at once. To pick another one, change `EFFECT`: the tabs and the screens stay as they are.
 - **Hidden screens.** A screen at opacity 0 is not drawn and takes no taps.
 - **Disabled.** `press.set_enabled(false)` shows `state=disabled`; no tab takes a tap.
 

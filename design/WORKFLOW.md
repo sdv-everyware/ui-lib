@@ -29,7 +29,7 @@ flowchart LR
   CJ --> B
   CP --> B
   LJ --> B
-  B["design/build-library.sh"] --> L["design/build/library.fig<br/>the Library"]
+  B["design/build-library.sh"] --> L["design/library.fig<br/>the Library"]
   L --> APPS["the apps' designs<br/>(hub, tv, pairs, ...)"]
   L -.->|"by hand: copy a set,<br/>paste it into the Figma file"| DF
 ```
@@ -76,7 +76,7 @@ sequenceDiagram
   U->>A: "add a chip"
   A->>A: components.json, the drawing in code, Rust
   A->>A: design/build-library.sh: #chip is in the Library, the apps can use it
-  Note over A,D: by hand, once: copy the set #chip from design/build/library.fig, paste it into the Figma file
+  Note over A,D: by hand, once: copy the set #chip from design/library.fig, paste it into the Figma file
   D->>D: #chip is in Figma, the designers can use it on their screens
 ```
 
@@ -114,7 +114,7 @@ flowchart TB
   LJ --> T["+ the agent's tweak<br/>design/figma-tweaks.js"]
   T --> L["Library: #stepper with the change<br/>the apps and the device have it now"]
   L --> N["the build reminds: the designers<br/>do not have the change"]
-  N -->|"by hand, once: copy the set from<br/>design/build/library.fig, paste it into the Figma file"| FG
+  N -->|"by hand, once: copy the set from<br/>design/library.fig, paste it into the Figma file"| FG
   FG -->|next fetch: Figma has it| DEL["the build says: the tweak changes<br/>nothing, delete it"]
 ```
 
@@ -162,7 +162,7 @@ What the build prints about a tweak:
 
 | Line | Meaning | What to do |
 |---|---|---|
-| `note: #stepper: the code changes Figma's drawing ... the designers do not have the change` | a tweak is at work | paste the set from `design/build/library.fig` into the Figma file |
+| `note: #stepper: the code changes Figma's drawing ... the designers do not have the change` | a tweak is at work | paste the set from `design/library.fig` into the Figma file |
 | `note: #stepper: its tweak changes nothing, Figma has the change` | the paste was done and fetched | delete the tweak from `design/figma-tweaks.js` |
 
 ## Limits
@@ -174,4 +174,4 @@ What the build prints about a tweak:
 - A component of the Library used inside another one (an icon in a button) is carried with the
   changes of its texts, names, opacity, visibility and fills; a swapped component inside is not.
 - The designers' file has to be the Library: the frame "Library" on the page "Components". It
-  starts as an import of `design/build/library.fig`.
+  starts as an import of `design/library.fig`.

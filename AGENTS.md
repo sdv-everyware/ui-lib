@@ -58,7 +58,8 @@ Build and test: `m libeveryware_ui everyware_ui_core_test everyware_ui_test` (RB
 device/rb3/sdv_media_db845c/tools/env.sh`, in bash), then run both
 tests from `out_rb3/host/linux-x86/nativetest64/<test>/<test>`. `everyware_ui_test` checks the
 Figma contract against the Library's own `data/library.dcf` (`design/build-library.sh --dcf`
-writes it again after a change of the Library; commit it with the change).
+writes it and `design/library.fig` again after a change of the Library; commit both with the
+change).
 
 ## After a design build
 

@@ -125,10 +125,11 @@ fn tabs_open_a_screen_from_the_app_and_another_effect() {
     let mut state = State::new(&Sizes::none());
     open_screen(&mut state, "#automations");
     assert_eq!((state.my_tabs.selected, state.my_tabs.previous), (2, Some(0)));
-    // another effect: Slide lays the screens side by side, Overview leaves to the left
+    // another effect: Slide lays the screens side by side, Overview leaves one width to the left
+    // while Automations comes in, Rooms between them stays hidden
     let old = state.my_tabs.screen(0, Effect::Slide, SCREEN_WIDTH);
     let new = state.my_tabs.screen(2, Effect::Slide, SCREEN_WIDTH);
-    assert_eq!((old.offset, new.offset, new.opacity), (Some(-3840.0), Some(0.0), 100.0));
+    assert_eq!((old.offset, new.offset, new.opacity), (Some(-SCREEN_WIDTH), Some(0.0), 100.0));
     assert_eq!(ScreenView::new(new, 96.0).x.map(|x| x.target), Some(96.0));
     // FadeThrough: the old screen goes in the first 90 ms of 300, then the new one comes
     let out = state.my_tabs.screen(0, Effect::FadeThrough, SCREEN_WIDTH).opacity_transition.unwrap();
