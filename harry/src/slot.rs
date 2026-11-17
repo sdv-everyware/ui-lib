@@ -1281,6 +1281,21 @@ mod tests {
             slot("#s", &Tile::new(TileKind::Image, SymbolIcon::DoorOpen, "Front door", "Camera")),
         ]
         .into_iter()
+        // every glyph of the icon button in every kind, size and state: each a variant of the set
+        .chain(Icon::ALL.iter().flat_map(|icon| {
+            [IconButtonKind::Tonal, IconButtonKind::Glass, IconButtonKind::Scrim].into_iter().flat_map(move |kind| {
+                [false, true].into_iter().flat_map(move |compact| {
+                    [true, false].into_iter().map(move |enabled| {
+                        let mut b = IconButton::new(kind, *icon);
+                        if compact {
+                            b = b.compact();
+                        }
+                        b.press.set_enabled(enabled);
+                        slot("#s", &b)
+                    })
+                })
+            })
+        }))
         .map(|s| s.items()[0].clone())
         .collect()
     }
