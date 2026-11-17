@@ -8,7 +8,8 @@
 # 1. tests: every changed Rust module has tests; the two host tests pass
 # 2. coverage: line coverage of the changed core modules (scripts/coverage.sh), the total
 # 3. docs: the site builds from the sources and nothing generated is in git; every component has
-#    its guide, its line in docs/llms.txt and its example; a
+#    its guide, its line in docs/llms.txt, its example, its row in the README's table and its
+#    place in the README's picture, which is built again when the Library changes; a
 #    component whose code changed without its guide or example is named (a note)
 # 4. the commit itself: the author, nothing private in the diff
 # 5. roles: no name of the API says what an app is about (scripts/check-roles.py)
@@ -81,7 +82,16 @@ for name in $(python3 -c "import json; print(' '.join(json.load(open('components
     [ -f "docs/content/$name.md" ] || fail "docs/content/$name.md: #${name//_/-} has no guide"
     grep -q "docs/content/$name.md" docs/llms.txt || fail "docs/llms.txt: #${name//_/-} is not in the list of components"
     [ -f "docs/examples/$name.rs" ] || fail "docs/examples/$name.rs: #${name//_/-} has no example"
+    grep -q "docs/content/$name.md" README.md || fail "README.md: #${name//_/-} has no row in the table of components"
 done
+# the README's picture shows every component that has a Figma set, and is built again with them
+for set in $(python3 -c "import json; print(' '.join(c['set'][1:] for c in json.load(open('components.json'))['components'].values() if c.get('set', '').startswith('#')))"); do
+    grep -q "'$set/" docs/readme/gallery.py || fail "docs/readme/gallery.py: #$set is not in the README's picture (add it to GROUPS, build the picture again)"
+done
+if [ "$1" != --all ] && echo "$changed" | grep -qE '^(components\.json|design/components-patch\.js|design/library\.fig|data/library\.dcf|docs/readme/gallery\.py)$' \
+    && ! echo "$changed" | grep -qx 'docs/readme/components.png'; then
+    fail "the Library or the gallery changed without docs/readme/components.png: build it again (the commands are at the top of docs/readme/gallery.py)"
+fi
 # a changed component and its docs: the author decides whether they are still right
 if [ "$1" != --all ]; then "$here/changed-components.py" | while read -r line; do note "$line"; done; fi
 # the guides name only things that exist (a renamed fn or layer fails here)
