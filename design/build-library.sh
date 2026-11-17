@@ -4,11 +4,15 @@
 # Every app's design starts from this file; an app's design/build.sh runs this first. Usage,
 # from anywhere:
 #
-#   build-library.sh            # -> design/build/library.fig (a build output, not in git)
+#   build-library.sh            # -> design/library.fig
 #   build-library.sh --dcf      # and data/library.dcf from it: the Library as the device reads it,
 #                               # for the tests of the harry binding (fig-to-dcf.sh, the tree's importer)
 #   build-library.sh --base     # library-base.fig again, from the designer's export
 #                               # (smarthome-app's design/source/Smart HOme.fig, or the path given)
+#
+# design/library.fig is in git, as data/library.dcf: commit it with every change of the Library.
+# It is written only when the document changed (a zip carries the time it was made, so a build
+# of the same Library leaves git clean); design/build/ holds what the build needs on the way.
 #
 # --base runs empty-patch.js on the export and drops its images and thumbnail (the drawing they
 # belonged to is gone). The tools are everyware's design/figma (EVERYWARE_FIGMA, found in the
@@ -37,10 +41,14 @@ fi
 mkdir -p "$HERE/build"
 # (library.code.json: the code-drawn sets as fingerprints, for fetch-library.js)
 LIBRARY_CODE_OUT="$HERE/build/library.code.json" node "$FIGMA/roundtrip.js" "$HERE/library-base.fig" "$HERE/build/library.fig" "$HERE/components-patch.js"
+OUT="$HERE/library.fig"
+if [ ! -f "$OUT" ] || ! cmp -s <(unzip -p "$OUT") <(unzip -p "$HERE/build/library.fig"); then
+    cp "$HERE/build/library.fig" "$OUT"
+fi
 if [ "${1:-}" = --dcf ]; then
     # the root is the Library frame itself (no app screen); two sets checked by name
     DCF_ROOT=Library DCF_NODES= DCF_CHECK='#button #toggle' \
-        "$TOP/vendor/sdv-everyware/everyware/scripts/fig-to-dcf.sh" "$HERE/build/library.fig" "$HERE/../data/library.dcf"
+        "$TOP/vendor/sdv-everyware/everyware/scripts/fig-to-dcf.sh" "$OUT" "$HERE/../data/library.dcf"
 fi
 # the last line: the file to give the user for a review
-echo "review in Figma (File > Import): $HERE/build/library.fig"
+echo "review in Figma (File > Import): $OUT"

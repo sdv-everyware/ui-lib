@@ -149,7 +149,7 @@ module.exports = function patch(msg, helpers) {
       const before = hashOf(set);
       TWEAKS[name](tweakTools(set));
       log(hashOf(set) !== before
-        ? `note: ${name}: the code changes Figma's drawing (design/figma-tweaks.js) and the designers do not have the change: paste the set from design/build/library.fig into their Figma file`
+        ? `note: ${name}: the code changes Figma's drawing (design/figma-tweaks.js) and the designers do not have the change: paste the set from design/library.fig into their Figma file`
         : `note: ${name}: its tweak changes nothing, Figma has the change: delete it from design/figma-tweaks.js`);
     }
     const variants = kids(key(set.guid)).filter(n => n.type === 'SYMBOL');
@@ -187,7 +187,7 @@ module.exports = function patch(msg, helpers) {
     if (seen && seen.figma !== seen.accepted) throw new Error(`${name} has two owners: the code draws it, and a designer changed it in Figma. Decide: hand it over ("figma": true in components.json, then design/fetch-library.sh), or keep the code (design/fetch-library.sh --accept '${name}')`);
     const made = drawSet(parent, name, x, y, ...rest);
     codeHashes[name] = hashOf(made.set);
-    if (seen && seen.code && seen.code !== codeHashes[name]) log(`note: ${name} is drawn by code and its drawing changed since the designers got it: paste the new set from design/build/library.fig into their Figma file, then design/fetch-library.sh --accept '${name}'`);
+    if (seen && seen.code && seen.code !== codeHashes[name]) log(`note: ${name} is drawn by code and its drawing changed since the designers got it: paste the new set from design/library.fig into their Figma file, then design/fetch-library.sh --accept '${name}'`);
     return made;
   };
 
