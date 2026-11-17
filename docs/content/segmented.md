@@ -74,6 +74,7 @@ pub fn send(command: Command) -> bool {
 - **Tap.** A down and an up on the same segment picks it: its accent highlight and white label fade in over 160 ms, the old one's fade out. `Selected(index)`; `value()` is its label.
 - **The chosen segment.** A tap on the segment that is chosen already does nothing. A finger that slides off is no tap.
 - **Disabled.** `press.set_enabled(false)` shows `state=disabled` (paler); the segments take no taps, the choice still shows.
+- **Tones.** `.tones([Tone::Success, Tone::Warning, Tone::Error])` gives each segment a colour for when it is chosen: green, yellow (its label in ink, white would not be legible) or red instead of the accent, so the choice also says how it is meant. A segment not chosen looks as before.
 - **Nothing chosen.** `clear()` lights no segment, for a value that is not known or a choice not made yet: `chosen()` is `None`, `value()` is empty, and every segment takes a tap (the one chosen before too). A tap or `select(index)` chooses one again.
 - **Labels.** The texts are the app's, from `Segmented::new`; a long label is cut with an ellipsis.
 
@@ -98,7 +99,7 @@ pub fn fan_reported(state: &mut State, speed: Option<&str>) {
 A slot 243 × 56 named `#<screen>/<name>` (`#office/fan`) with an instance of `#segmented` of the right `segments` (2, 3 or 4). Labels in the preview are placeholders; the app writes the real ones.
 
 ## How it works
-The variant is `segments` (the number) and `state` (`default` or `disabled`). The choice is not a variant: each segment is `#segmented/segment-<i>` (a tap target) with `/selected` (the accent highlight), `/label` (ink2) and `/label-selected` (white). The binding lights the chosen one by opacity with the `value` transition (160 ms), so a choice does not rebuild the tree. Segments 3 and 4 are optional parts: `segments=2` has two.
+The variant is `segments` (the number) and `state` (`default` or `disabled`). The choice is not a variant: each segment is `#segmented/segment-<i>` (a tap target) with `/selected` (the accent highlight), `/selected-success`, `/selected-warning` and `/selected-error` (the tones' highlights), `/label` (ink2), `/label-selected` (white) and `/label-selected-ink` (ink, on the warning's yellow); the binding lights the chosen segment's highlight of its tone and its label. The binding lights the chosen one by opacity with the `value` transition (160 ms), so a choice does not rebuild the tree. Segments 3 and 4 are optional parts: `segments=2` has two.
 
 ## Traps
 - Taps come by the segment's name with the slot in front (`#office/fan/#segmented/segment-2`): match the slot with `part_of`, as the example does, not with `#segmented/segment-` alone, or two segmented buttons on one screen answer each other's taps.

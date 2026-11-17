@@ -2,6 +2,7 @@
 
 use crate::gesture::Gesture;
 use crate::pressable::Pressable;
+use crate::tone::Tone;
 use crate::transitions::{Change, ComponentKind};
 use crate::Component;
 
@@ -37,6 +38,8 @@ pub struct Button {
     pub size: ButtonSize,
     /// The text on it.
     pub label: String,
+    /// Its colour role: the default accent, or success, warning, error (a deletion).
+    pub tone: Tone,
     /// Pressed and disabled.
     pub press: Pressable,
 }
@@ -51,7 +54,13 @@ pub enum ButtonEvent {
 impl Button {
     /// A new, enabled button of the regular size.
     pub fn new(kind: ButtonKind, label: impl Into<String>) -> Self {
-        Button { kind, size: ButtonSize::Regular, label: label.into(), press: Pressable::default() }
+        Button { kind, size: ButtonSize::Regular, label: label.into(), tone: Tone::Default, press: Pressable::default() }
+    }
+
+    /// The same button in a tone (`Tone::Error` for an action that cannot be undone).
+    pub fn tone(mut self, tone: Tone) -> Self {
+        self.tone = tone;
+        self
     }
 
     /// The same button in the compact size.
@@ -79,7 +88,13 @@ impl Component for Button {
             ButtonSize::Regular => "regular",
             ButtonSize::Compact => "compact",
         };
-        format!("kind={kind}, state={}, size={size}", self.press.enabled_state())
+        // a tone is a kind of its own in the set (kind=primary-error), so the names of the
+        // default kinds stay as they were
+        let tone = match self.tone {
+            Tone::Default => String::new(),
+            t => format!("-{}", t.name()),
+        };
+        format!("kind={kind}{tone}, state={}, size={size}", self.press.enabled_state())
     }
 
     fn last_change(&self) -> Option<Change> {
@@ -231,5 +246,21 @@ mod tests {
         assert_eq!(b.transition(), None);
         b.on(Gesture::DOWN);
         assert_eq!(b.on(Gesture::UP), None);
+    }
+
+    #[test]
+    fn a_tone_is_a_kind_of_its_own_and_the_default_names_stay() {
+        let b = Button::new(ButtonKind::Primary, "OK");
+        assert_eq!((b.tone, b.variant().as_str()), (Tone::Default, "kind=primary, state=default, size=regular"));
+        let mut red = Button::new(ButtonKind::Primary, "Remove").tone(Tone::Error);
+        assert_eq!(red.variant(), "kind=primary-error, state=default, size=regular");
+        red.press.set_enabled(false);
+        assert_eq!(red.variant(), "kind=primary-error, state=disabled, size=regular");
+        assert_eq!(Button::new(ButtonKind::Secondary, "Yes").tone(Tone::Success).compact().variant(), "kind=secondary-success, state=default, size=compact");
+        assert_eq!(Button::new(ButtonKind::Ghost, "Maybe").tone(Tone::Warning).variant(), "kind=ghost-warning, state=default, size=regular");
+        // a toned button taps as any other
+        let mut b = Button::new(ButtonKind::Secondary, "Remove").tone(Tone::Error);
+        b.on(Gesture::DOWN);
+        assert_eq!(b.on(Gesture::UP), Some(ButtonEvent::Clicked));
     }
 }

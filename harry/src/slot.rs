@@ -42,6 +42,7 @@ use everyware_ui_core::list_item::{ListItem as ListRow, ListItemKind, ListItemLi
 use everyware_ui_core::list_view::Row;
 use everyware_ui_core::list_view::{ListView, Scroll};
 use everyware_ui_core::radio::Radio;
+use everyware_ui_core::tone::Tone;
 use everyware_ui_core::segmented::Segmented;
 use everyware_ui_core::tabs::Tabs;
 use everyware_ui_core::slider::Slider;
@@ -666,6 +667,8 @@ fn pressed(item: ComponentItem, node: &str, press: &Pressable, kind: ComponentKi
     item.opacity(node, Meter::new(press.pressed_target(), press.press_transition(kind)))
 }
 
+/// The label and the pressed layer; a tone is a kind of the set (`kind=primary-error`), drawn
+/// in its colours, so nothing more is set.
 impl Slotted for Button {
     const SET: &'static str = "#button";
     fn parts(&self, item: ComponentItem) -> ComponentItem {
@@ -785,8 +788,9 @@ impl Slotted for Dropdown {
 
 impl Slotted for Segmented {
     const SET: &'static str = "#segmented";
-    /// Per segment its labels and its light: the chosen one's highlight and white label at 100,
-    /// the ink2 label at the rest. The segments take taps by their names
+    /// Per segment its labels and its light: the chosen one's highlight in its tone (the accent,
+    /// `/selected-success`, `-warning`, `-error`) and its label (white, or ink on the warning's
+    /// yellow) at 100, the ink2 label at the rest. The segments take taps by their names
     /// (`#segmented/segment-<i>`), unambiguous while one segmented button is on the screen.
     /// Segments 3 and 4 are not in every variant (segments=2 has two).
     fn parts(&self, item: ComponentItem) -> ComponentItem {
@@ -794,14 +798,23 @@ impl Slotted for Segmented {
         self.labels.iter().enumerate().fold(item, |item, (i, label)| {
             let n = format!("#segmented/segment-{}", i + 1);
             let on = self.target(i);
-            let names = [n.clone(), format!("{n}/selected"), format!("{n}/label"), format!("{n}/label-selected")];
-            let item = item
+            let tone = self.tone_of(i);
+            let lit = |when: bool| Meter::new(if when { on } else { 0.0 }, move_to);
+            let mut names = vec![n.clone(), format!("{n}/selected"), format!("{n}/label"), format!("{n}/label-selected"), format!("{n}/label-selected-ink")];
+            let mut item = item
                 .text(format!("{n}/label"), label.clone())
                 .text(format!("{n}/label-selected"), label.clone())
-                .opacity(format!("{n}/selected"), Meter::new(on, move_to))
-                .opacity(format!("{n}/label-selected"), Meter::new(on, move_to))
+                .text(format!("{n}/label-selected-ink"), label.clone())
+                .opacity(format!("{n}/selected"), lit(tone == Tone::Default))
+                .opacity(format!("{n}/label-selected"), lit(!tone.dark_label()))
+                .opacity(format!("{n}/label-selected-ink"), lit(tone.dark_label()))
                 .opacity(format!("{n}/label"), Meter::new(100.0 - on, move_to))
-                .interactive(n, self.press.enabled);
+                .interactive(n.clone(), self.press.enabled);
+            for t in [Tone::Success, Tone::Warning, Tone::Error] {
+                let layer = format!("{n}/selected-{}", t.name());
+                item = item.opacity(layer.clone(), lit(tone == t));
+                names.push(layer);
+            }
             if i >= 2 { names.into_iter().fold(item, |item, name| item.optional(name)) } else { item }
         })
     }
@@ -1198,12 +1211,43 @@ mod tests {
         assert_eq!(row_of("#wifi/networks", "#wifi/networks-scrollbar"), None);
     }
 
+    #[test]
+    fn a_chosen_segment_is_lit_in_its_tone() {
+        let mut s = Segmented::new(["Yes", "Maybe", "No"]).tones([Tone::Success, Tone::Warning, Tone::Error]);
+        let lit = |s: &Segmented, segment: usize| {
+            let item = slot("#s", s).items()[0].clone();
+            let n = format!("#segmented/segment-{segment}");
+            let mut on: Vec<String> = item.opacities.iter().filter(|(node, m)| node.starts_with(&format!("{n}/")) && m.target > 0.0).map(|(node, _)| node[n.len() + 1..].to_string()).collect();
+            on.sort();
+            on
+        };
+        // none chosen: only the ink2 labels
+        s.clear();
+        assert_eq!((lit(&s, 1), lit(&s, 2), lit(&s, 3)), (vec!["label".to_string()], vec!["label".to_string()], vec!["label".to_string()]));
+        // Yes: green with a white label; Maybe: yellow with an ink label; No: red, white
+        s.select(0);
+        assert_eq!(lit(&s, 1), ["label-selected", "selected-success"]);
+        s.select(1);
+        assert_eq!(lit(&s, 2), ["label-selected-ink", "selected-warning"]);
+        assert_eq!(lit(&s, 1), ["label"]);
+        s.select(2);
+        assert_eq!(lit(&s, 3), ["label-selected", "selected-error"]);
+        // without tones: the accent, as before
+        let plain = Segmented::new(["Low", "High"]);
+        assert_eq!(lit(&plain, 1), ["label-selected", "selected"]);
+    }
+
     /// One item per component of the library, as an app would make it.
     fn library() -> Vec<ComponentItem> {
         let mut dropdown = Dropdown::new(["Living room", "Bedroom", "Office"]);
         dropdown.open = true;
         [
             slot("#s", &Button::new(ButtonKind::Primary, "OK")),
+            // a tone is a kind of the set: every look in every tone
+            slot("#s", &Button::new(ButtonKind::Primary, "Remove").tone(Tone::Error)),
+            slot("#s", &Button::new(ButtonKind::Secondary, "Remove").tone(Tone::Error).compact()),
+            slot("#s", &Button::new(ButtonKind::Ghost, "Not sure").tone(Tone::Warning)),
+            slot("#s", &Button::new(ButtonKind::Secondary, "Done").tone(Tone::Success)),
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::Minus)),
             slot("#s", &Toggle::new(false)),
             slot("#s", &RadioGroup::new(["One"]).options[0].clone()),
@@ -1219,6 +1263,7 @@ mod tests {
             slot("#s", &IconButton::new(IconButtonKind::Tonal, Icon::House)),
             slot("#s", &Segmented::new(["Low", "Med", "High"])),
             slot("#s", &Segmented::new(["Off", "On"])),
+            slot("#s", &Segmented::new(["Yes", "Maybe", "No", "Later"]).tones([Tone::Success, Tone::Warning, Tone::Error, Tone::Default])),
             slot("#s", &Tabs::new(["Overview", "Rooms", "Automations"])),
             slot("#s", &Tabs::new(["Living room", "Entryway", "Bedroom", "Office"])),
             slot("#s", &Symbol::new(SymbolIcon::DoorOpen)),

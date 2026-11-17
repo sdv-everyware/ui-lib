@@ -3,10 +3,13 @@
 //! rebuilds the tree): every segment has its highlight (`#segmented/segment-<i>/selected`) and
 //! two labels (`/label` in ink2, `/label-selected` in white), the chosen one is lit by opacity.
 //! Each segment (`#segmented/segment-<i>`) takes taps by its own name. A choice not made yet is a
-//! state of its own (`clear`): no segment lit, every segment takes a tap.
+//! state of its own (`clear`): no segment lit, every segment takes a tap. A segment may have a
+//! tone (`tones`): chosen, it is lit in the tone's colour (`/selected-<tone>`) instead of the
+//! accent, its label white or, on the warning's yellow, ink (`/label-selected-ink`).
 
 use crate::gesture::Gesture;
 use crate::pressable::Pressable;
+use crate::tone::Tone;
 use crate::transitions::{self, Change, ComponentKind, Transition};
 use crate::Component;
 
@@ -23,6 +26,8 @@ pub struct Segmented {
     /// No segment is chosen (a choice not made yet): none is lit, `chosen()` is None, `value()`
     /// is empty and every segment takes a tap. Set with `clear`, ended by `select` or a tap.
     pub cleared: bool,
+    /// Per segment its tone when it is chosen (`Tone::Default`: the accent).
+    pub tones: Vec<Tone>,
     /// Enabled, and the last change; a segment's press is in `segments`.
     pub press: Pressable,
     /// One press per segment: a tap is a down and an up on the same segment.
@@ -42,7 +47,21 @@ impl Segmented {
         let labels: Vec<String> = labels.into_iter().map(Into::into).collect();
         assert!(SEGMENTS.contains(&labels.len()), "#segmented has 2 to 4 segments, not {}", labels.len());
         let segments = vec![Pressable::default(); labels.len()];
-        Segmented { labels, selected: 0, cleared: false, press: Pressable::default(), segments }
+        let tones = vec![Tone::Default; labels.len()];
+        Segmented { labels, selected: 0, cleared: false, tones, press: Pressable::default(), segments }
+    }
+
+    /// The same segmented button with a tone per segment, in the labels' order.
+    pub fn tones(mut self, tones: impl IntoIterator<Item = Tone>) -> Self {
+        let tones: Vec<Tone> = tones.into_iter().collect();
+        assert_eq!(tones.len(), self.labels.len(), "one tone per segment");
+        self.tones = tones;
+        self
+    }
+
+    /// The tone of segment `index` (the default out of range).
+    pub fn tone_of(&self, index: usize) -> Tone {
+        self.tones.get(index).copied().unwrap_or_default()
     }
 
     /// The label of the chosen segment; empty while none is chosen.
@@ -149,6 +168,21 @@ mod tests {
         // an index out of range is no choice, never a panic
         s.selected = 7;
         assert_eq!((s.chosen(), s.value(), s.target(7)), (None, "", 0.0));
+    }
+
+    #[test]
+    fn a_segment_has_its_tone() {
+        let s = Segmented::new(["Yes", "Maybe", "No"]).tones([Tone::Success, Tone::Warning, Tone::Error]);
+        assert_eq!((0..4).map(|i| s.tone_of(i)).collect::<Vec<_>>(), [Tone::Success, Tone::Warning, Tone::Error, Tone::Default]);
+        // the tone does not change the variant: the colours are layers lit by opacity
+        assert_eq!(s.variant(), "segments=3, state=default");
+        assert_eq!(Segmented::new(["A", "B"]).tone_of(1), Tone::Default);
+    }
+
+    #[test]
+    #[should_panic(expected = "one tone per segment")]
+    fn one_tone_per_segment() {
+        let _ = Segmented::new(["A", "B"]).tones([Tone::Error]);
     }
 
     #[test]
