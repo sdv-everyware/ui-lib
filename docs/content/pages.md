@@ -77,6 +77,8 @@ model.list_page = page(1);
 ## How it behaves
 - **Deeper.** `show(1)`: with `Effect::Slide` the new page comes from the right to the first page's place and the old one leaves to the left, both in 300 ms (components.json, `pages`/`switch`, the tabs' time). The old page disappears when the slide ends.
 - **Back.** `show(0)`: the same the other way. The direction follows the order of the pages, so a page with a lower number always comes from the left.
+- **Several pages away.** When more than one page leads to a page (a list page and a details page that both ask for the same confirmation), put it after both. A step over pages in between slides the same way: the new page comes one width from its side, the old one leaves one width to the other side, the pages between stay hidden (Material 3's shared axis X).
+- **Open deeper.** `Pages::at(page)` when the sheet opens on another page than the first: that page shows at once and nothing slides; a step from there slides as from any page.
 - **The page that shows.** `show` of the page that shows changes nothing.
 - **Again.** `reset()` when the sheet opens again: the first page shows and nothing slides.
 - **Other effects.** With the pages side by side only `Effect::Slide` brings the next page into view. `Effect::Fade`, `Effect::FadeThrough` and `Effect::None` move nothing: each page stays where the design draws it. Use them only for pages drawn on top of each other at one place, as the tabs' screens are.
@@ -101,7 +103,7 @@ Each page is a frame of the app's design with its own name (`#prefs/page-main`, 
 - Put the frame that clips the pages at x 0 of the component the pages are in (a sheet's content, `#prefs-content`). The app reads the first page's place from that component's variant (`Sizes::part`), and harry takes a page's x in the clipping frame: the two agree only at x 0.
 
 ## How it works
-`Pages` is `selected` and `previous`. `page(i, effect, width)` asks the effect where page `i` goes (`Effect::target`): an opacity and an offset from the first page's place, each with its transition (none before the first switch and after `reset()`: the pages take their places at once). `ScreenView::new(target, design_x)` adds the offset to the first page's x, and `ScreenCustomizer` moves and fades the page frame by frame. A page at opacity 0 is not drawn and takes no taps.
+`Pages` is `selected` and `previous`. `page(i, effect, width)` asks the effect where page `i` goes (`Effect::target`): an opacity and an offset from the first page's place, each with its transition (none before the first switch, after `reset()` and from `Pages::at`: the pages take their places at once). `ScreenView::new(target, design_x)` adds the offset to the first page's x, and `ScreenCustomizer` moves and fades the page frame by frame. A page at opacity 0 is not drawn and takes no taps.
 
 ## Traps
 - Give `ScreenView::new` the first page's x for every page, not each page's own x: the page that shows stands where the first page stands.

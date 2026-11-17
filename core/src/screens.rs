@@ -20,8 +20,10 @@ pub enum Effect {
     /// Material 3's fade through: the old screen fades out in the first 30 %, then the new one
     /// fades in.
     FadeThrough,
-    /// The screens lie side by side in the order of the tabs and slide by one width per tab; the
-    /// old one disappears when it is out.
+    /// The screens lie side by side in their order and slide (Material 3's shared axis X): the
+    /// new one comes in one width from the side the order gives (a higher one from the right),
+    /// the old one leaves one width to the other side and disappears when it is out, whatever
+    /// screens lie between them. The others wait hidden one width beside the one that shows.
     Slide,
     /// The new screen is there at once.
     None,
@@ -59,9 +61,16 @@ impl Effect {
                 }
             })),
             Effect::Slide => {
-                // the leaving screen stays drawn while it moves out and goes when the slide ends;
-                // the others are already at 0 and stay there
+                // only the old and the new screen move, one width each: the leaving one stays
+                // drawn while it moves out and goes when the slide ends. The others are already
+                // at 0 and wait one width away on their side of the one that shows, so the next
+                // one comes from there.
                 let leaving = previous == Some(screen) && !shown;
+                let side = match screen.cmp(&selected) {
+                    std::cmp::Ordering::Less => -1.0,
+                    std::cmp::Ordering::Equal => 0.0,
+                    std::cmp::Ordering::Greater => 1.0,
+                };
                 ScreenTarget {
                     opacity: if leaving { 0.0 } else { opacity },
                     opacity_transition: if leaving {
@@ -69,8 +78,8 @@ impl Effect {
                     } else {
                         None
                     },
-                    offset: Some((screen as f32 - selected as f32) * width),
-                    offset_transition: switch,
+                    offset: Some(side * width),
+                    offset_transition: if shown || leaving { switch } else { None },
                 }
             }
             Effect::None => still(None),
@@ -103,6 +112,12 @@ impl Pages {
     /// the pages take their places at once, nothing slides.
     pub fn reset(&mut self) {
         *self = Pages::default();
+    }
+
+    /// Pages that open on page `page` with nothing before it (a sheet that opens on a deeper
+    /// page): the pages take their places at once, nothing slides.
+    pub fn at(page: usize) -> Self {
+        Pages { selected: page, previous: None }
     }
 
     /// The time of a switch (components.json, pages/switch).
@@ -145,16 +160,59 @@ mod tests {
     }
 
     #[test]
-    fn slide_lays_the_screens_out_in_tab_order() {
-        // from tab 0 to tab 2: 0 leaves to the left, 2 comes from the right, 1 passes hidden
+    fn slide_moves_the_old_and_the_new_screen_one_width_whatever_lies_between() {
+        // from tab 0 to tab 2: 2 comes one width from the right, 0 leaves one width to the left,
+        // 1 waits hidden on the left of 2 and does not move there
         let t = |s| Effect::Slide.target(s, 2, Some(0), 1920.0, SWITCH);
-        assert_eq!((t(0).offset, t(1).offset, t(2).offset), (Some(-3840.0), Some(-1920.0), Some(0.0)));
+        assert_eq!((t(0).offset, t(1).offset, t(2).offset), (Some(-1920.0), Some(-1920.0), Some(0.0)));
         assert_eq!((t(2).opacity, t(2).opacity_transition), (100.0, None));
         assert_eq!((t(0).opacity, ms(t(0).opacity_transition)), (0.0, Some((300, 0))));
-        assert_eq!((t(1).opacity, t(1).opacity_transition), (0.0, None));
-        assert_eq!(ms(t(2).offset_transition), Some((0, 300)));
-        // back to the right: the direction follows the order
-        assert_eq!(Effect::Slide.target(1, 0, Some(2), 1920.0, SWITCH).offset, Some(1920.0));
+        assert_eq!((t(1).opacity, t(1).opacity_transition, t(1).offset_transition), (0.0, None, None));
+        assert_eq!((ms(t(2).offset_transition), ms(t(0).offset_transition)), (Some((0, 300)), Some((0, 300))));
+        // before the switch 2 waited one width to the right of 0, so it comes from there
+        assert_eq!(Effect::Slide.target(2, 0, None, 1920.0, SWITCH).offset, Some(1920.0));
+        // back from 2 to 0: 0 comes from the left, where it left to; 2 leaves to the right
+        let back = |s| Effect::Slide.target(s, 0, Some(2), 1920.0, SWITCH);
+        assert_eq!((back(0).offset, back(1).offset, back(2).offset), (Some(0.0), Some(1920.0), Some(1920.0)));
+        // the direction follows the order of the screens, not where the switch comes from
+        assert_eq!(Effect::Slide.target(2, 3, Some(2), 880.0, SWITCH).offset, Some(-880.0));
+    }
+
+    /// The slide that moves every screen by the screens between it and the one that shows, each
+    /// with the switch's transition: the reference for a switch between neighbours.
+    fn by_the_screens_between(screen: usize, selected: usize, previous: Option<usize>, width: f32, switch: Option<Transition>) -> ScreenTarget {
+        let leaving = previous == Some(screen) && screen != selected;
+        ScreenTarget {
+            opacity: if screen == selected { 100.0 } else { 0.0 },
+            opacity_transition: if leaving { switch.map(|t| Transition { duration: Duration::ZERO, easing: Easing::Linear, delay: t.delay + t.duration }) } else { None },
+            offset: Some((screen as f32 - selected as f32) * width),
+            offset_transition: switch,
+        }
+    }
+
+    #[test]
+    fn a_slide_between_neighbours_moves_what_shows_as_by_the_screens_between() {
+        for n in 2..=4usize {
+            for from in 0..n {
+                for to in [from.wrapping_sub(1), from + 1].into_iter().filter(|&to| to < n) {
+                    for s in 0..n {
+                        let new = Effect::Slide.target(s, to, Some(from), 880.0, SWITCH);
+                        let old = by_the_screens_between(s, to, Some(from), 880.0, SWITCH);
+                        if s == from || s == to || n == 2 {
+                            // the old and the new screen: the same place, opacity and transitions
+                            assert_eq!(new, old, "{n} screens, {from} -> {to}, screen {s}");
+                        } else {
+                            // a screen further away is hidden in both and is not drawn
+                            assert_eq!((new.opacity, new.opacity_transition, old.opacity, old.opacity_transition), (0.0, None, 0.0, None));
+                        }
+                    }
+                }
+            }
+        }
+        // two pages before the first switch (Pages gives no transition then): the same too
+        for s in 0..2 {
+            assert_eq!(Effect::Slide.target(s, 0, None, 880.0, None), by_the_screens_between(s, 0, None, 880.0, None));
+        }
     }
 
     #[test]
@@ -173,6 +231,19 @@ mod tests {
         assert_eq!(pages, Pages::default());
         // after a reset the pages take their places at once
         assert_eq!(pages.page(0, Effect::Slide, 880.0).offset_transition, None);
+    }
+
+    #[test]
+    fn pages_open_on_another_page_without_a_slide() {
+        let mut pages = Pages::at(2);
+        assert_eq!((pages.selected, pages.previous), (2, None));
+        let p = |pages: &Pages, i| pages.page(i, Effect::Slide, 880.0);
+        // the page shows at its place at once, the others wait on their sides
+        assert_eq!((p(&pages, 2).offset, p(&pages, 2).opacity, p(&pages, 2).offset_transition), (Some(0.0), 100.0, None));
+        assert_eq!((p(&pages, 0).offset, p(&pages, 3).offset, p(&pages, 3).opacity), (Some(-880.0), Some(880.0), 0.0));
+        // a step from there slides as from any page
+        pages.show(3);
+        assert_eq!((p(&pages, 3).offset, ms(p(&pages, 3).offset_transition), p(&pages, 2).offset), (Some(0.0), Some((0, 300)), Some(-880.0)));
     }
 
     #[test]
