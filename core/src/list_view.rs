@@ -26,7 +26,7 @@ pub enum ListEvent {
 pub const SCROLLBAR_DELAY: Duration = Duration::from_millis(300);
 
 /// Where the content is: a settled scroll, or a fling from it.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Scroll {
     /// The settled position (the start of the fling while one runs).
     pub base: f32,
@@ -100,8 +100,9 @@ pub trait Row: Clone + Debug {
 }
 
 impl Row for ListItem {
+    /// The row's id when the app gave one (`ListItem::id`), else its headline.
     fn key(&self) -> &str {
-        &self.title
+        self.id.as_deref().unwrap_or(&self.title)
     }
     fn tap(&mut self, gesture: Gesture) -> bool {
         self.on(gesture) == Some(ListItemEvent::Clicked)
@@ -440,6 +441,43 @@ mod tests {
         l.set_rows((0..5).rev().map(|i| ListItem::new(ListItemKind::Plain, format!("row {i}"), "")));
         assert_eq!(l.on(None, Gesture::up(0.0, 302.0), now), Some(ListEvent::Chosen(2)));
         assert_eq!(l.rows()[2].title, "row 2");
+    }
+
+    #[test]
+    fn rows_of_the_same_title_keep_their_tap_by_their_id() {
+        let now = Instant::now();
+        // a daily event: the same title on two days, each row with its event's id
+        let row = |id: &str| ListItem::new(ListItemKind::Plain, "Stand-up", "").id(id);
+        let mut l = ListView::new([row("mon"), row("tue")], 424.0, 72.0);
+        l.on(Some(1), Gesture::down(0.0, 100.0), now);
+        assert!(l.rows()[1].press.pressed);
+        // a refresh: Monday's is over, a new one comes first; the finger stays on Tuesday's
+        l.set_rows([row("new"), row("tue")]);
+        assert!(!l.rows()[0].press.pressed && l.rows()[1].press.pressed);
+        assert_eq!(l.on(Some(1), Gesture::up(0.0, 100.0), now), Some(ListEvent::Chosen(1)));
+        // the row that came first takes nothing of it
+        l.on(Some(1), Gesture::down(0.0, 100.0), now);
+        l.set_rows([row("tue"), row("wed")]);
+        assert_eq!(l.on(None, Gesture::up(0.0, 100.0), now), Some(ListEvent::Chosen(0)), "the tap follows Tuesday's row");
+        // without ids the headline is the key
+        assert_eq!(Row::key(&ListItem::new(ListItemKind::Plain, "Stand-up", "")), "Stand-up");
+        assert_eq!(Row::key(&row("tue")), "tue");
+    }
+
+    #[test]
+    fn a_passive_row_is_never_pressed_or_chosen_but_drags_the_list() {
+        let now = Instant::now();
+        let rows = (0..12).map(|i| {
+            let row = ListItem::new(ListItemKind::Plain, format!("row {i}"), "");
+            if i == 0 { row.passive() } else { row }
+        });
+        let mut l = ListView::new(rows, 300.0, 80.0);
+        l.on(Some(0), Gesture::down(0.0, 10.0), now);
+        assert!(!l.rows()[0].press.pressed);
+        assert_eq!(l.on(Some(0), Gesture::up(0.0, 12.0), now), None);
+        l.on(Some(0), Gesture::down(0.0, 250.0), now);
+        l.on(None, Gesture::Move { x: 0.0, y: 150.0, inside: false }, now);
+        assert_eq!(l.scroll_at(now), 100.0 - TOUCH_SLOP);
     }
 
     #[test]

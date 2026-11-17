@@ -155,6 +155,12 @@ pub struct ListItem {
     /// What the row takes of its list (its height plus the gap) when that is not the list's
     /// pitch: a subheader between taller rows. None: the list's pitch.
     pub pitch: Option<f32>,
+    /// What identifies the row across a refresh of its list (`ListView::set_rows`) when its
+    /// headline does not: the id of the item it shows. None: the headline.
+    pub id: Option<String>,
+    /// The row takes no tap (a line that only tells something, "Nothing found"): never pressed or
+    /// chosen, a finger on it drags the list, as on a subheader.
+    pub passive: bool,
 }
 
 /// What a list item reports.
@@ -218,9 +224,23 @@ impl ListItem {
         }
     }
 
-    /// Whether a finger on the row taps it; a subheader only lets the list drag.
+    /// Whether a finger on the row taps it; a subheader and a passive row only let the list drag.
     pub fn takes_taps(&self) -> bool {
-        self.kind != ListItemKind::Subheader
+        self.kind != ListItemKind::Subheader && !self.passive
+    }
+
+    /// What identifies the row across a refresh of its list when its headline does not (two
+    /// events of the same title): the id of the item it shows.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// The row takes no tap: it tells something and opens nothing ("Nothing found"). A finger on
+    /// it drags the list and shows no pressed layer.
+    pub fn passive(mut self) -> Self {
+        self.passive = true;
+        self
     }
 
     /// The trailing text (kinds image, text and subheader).
@@ -358,6 +378,10 @@ mod tests {
     fn a_subheader_takes_no_tap() {
         assert!(!ListItem::new(ListItemKind::Subheader, "Section", "").takes_taps());
         assert!(ListItem::new(ListItemKind::LeadingText, "A", "").takes_taps());
+        // a passive row of any kind neither
+        let note = ListItem::new(ListItemKind::Plain, "Nothing found", "").passive();
+        assert!(!note.takes_taps());
+        assert_eq!(note.variant(), "state=default, kind=plain, lines=two, size=regular", "it looks as any row");
         assert_eq!(ListItem::new(ListItemKind::Subheader, "Section", "").height(), 48.0);
     }
 

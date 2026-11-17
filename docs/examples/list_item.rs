@@ -78,11 +78,13 @@ pub fn on_gesture(state: &mut State, node: &str, gesture: Gesture) {
 
 // doc:change
 /// New stories from the service: one row each, the headline, the summary, the age at the end and
-/// the picture by its key. A row keeps its pressed and selected state by its key (the headline),
-/// so a tap in progress still lands; the scroll stays inside the new content.
+/// the picture by its key. A row keeps its pressed and selected state by its id (the story's: two
+/// stories may have the same headline), so a tap in progress still lands; the scroll stays inside
+/// the new content.
 pub fn show_stories(state: &mut State, stories: &[Story]) {
     state.my_list_item.set_rows(stories.iter().map(|story| {
         ListItem::new(ListItemKind::Image, story.title.clone(), story.summary.clone())
+            .id(story.id.to_string())
             .lines(ListItemLines::Three)
             .size(ListItemSize::Column)
             .image(format!("news/{}", story.id))
@@ -105,20 +107,25 @@ const TWO_LINES_PITCH: f32 = 72.0 + 8.0;
 /// Rows in groups: a subheader over each group (its label and a trailing text), then rows that
 /// lead with a short text of two lines and a bar in the group's colour (from a palette: each
 /// colour stays a picture). Each row takes its own pitch, so the rows after a subheader move up.
+/// A line that only tells something ("No stories") is passive: no tap, no pressed look.
 pub fn show_groups(state: &mut State, groups: &[Group]) {
     state.my_list_item.set_rows(groups.iter().flat_map(|group| {
         let head = ListItem::new(ListItemKind::Subheader, group.label.clone(), "")
             .trailing_text(group.count.clone())
             .size(ListItemSize::Column)
             .pitch(SUBHEADER_PITCH);
+        let empty = group.stories.is_empty().then(|| {
+            ListItem::new(ListItemKind::Plain, "No stories", "").lines(ListItemLines::One).size(ListItemSize::Column).pitch(TWO_LINES_PITCH).passive()
+        });
         let rows = group.stories.iter().map(|story| {
             ListItem::new(ListItemKind::LeadingText, story.title.clone(), story.summary.clone())
+                .id(story.id.to_string())
                 .leading_text(story.age.clone(), "ago")
                 .accent(group.color)
                 .size(ListItemSize::Column)
                 .pitch(TWO_LINES_PITCH)
         });
-        std::iter::once(head).chain(rows)
+        std::iter::once(head).chain(empty).chain(rows)
     }));
 }
 // doc:end
@@ -191,18 +198,28 @@ fn list_item_new_stories_keep_the_selected_row() {
 fn list_item_groups_have_a_subheader_each_and_rows_with_a_leading_text() {
     let mut state = State::new(&Sizes::none());
     let mut model = UiModel::new(HashMap::new());
-    let group = |label: &str, color: u32, n: u64| Group { label: label.into(), count: format!("{n} STORIES"), color, stories: stories(n) };
-    show_groups(&mut state, &[group("TODAY", 0x0b8043, 2), group("YESTERDAY", 0x039be5, 3)]);
+    // the groups' stories have their own ids, also where a headline repeats ("Story 0")
+    let group = |label: &str, color: u32, first: u64, n: u64| Group {
+        label: label.into(),
+        count: format!("{n} STORIES"),
+        color,
+        stories: stories(n).into_iter().map(|s| Story { id: first + s.id, ..s }).collect(),
+    };
+    show_groups(&mut state, &[group("TODAY", 0x0b8043, 0, 2), group("YESTERDAY", 0x039be5, 100, 3), group("EARLIER", 0x039be5, 200, 0)]);
     present(&mut model, &state);
     let list = &state.my_list_item;
     let rows = list.rows();
-    assert_eq!(rows.len(), 7);
+    assert_eq!(rows.len(), 9);
     assert_eq!(rows[0].variant(), "state=default, kind=subheader, lines=one, size=column");
     assert_eq!(rows[1].variant(), "state=default, kind=leading-text, lines=two, size=column");
     assert_eq!((rows[1].leading_title.as_str(), rows[1].accent), ("2 h", Some(0x0b8043)));
     // the second subheader comes after one subheader and two rows
     assert_eq!(list.offset(3), SUBHEADER_PITCH + 2.0 * TWO_LINES_PITCH);
-    assert_eq!(list.content_h(), 2.0 * SUBHEADER_PITCH + 5.0 * TWO_LINES_PITCH);
+    assert_eq!((rows[1].title.as_str(), rows[4].title.as_str()), ("Story 0", "Story 0"));
+    assert_eq!((rows[1].id.as_deref(), rows[4].id.as_deref()), (Some("0"), Some("100")));
+    // an empty group: its line takes no tap
+    assert_eq!((rows[8].title.as_str(), rows[8].takes_taps()), ("No stories", false));
+    assert_eq!(list.content_h(), 3.0 * SUBHEADER_PITCH + 6.0 * TWO_LINES_PITCH);
 }
 
 #[test]

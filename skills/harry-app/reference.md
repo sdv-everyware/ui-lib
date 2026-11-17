@@ -46,6 +46,7 @@ with the same syntax in its own `ui_model.rs`; the rows below quote both.
 | `AnimationOverride` | how the next variant change moves | smarthome-app `wifi_step_animation: AnimationOverride = "#wifi/content";` |
 | `Meter` | a value that a customizer turns into an opacity (0 to 100), a meter, or a y in pixels (`FollowYCustomizer`) | smarthome-app `wifi_scrim: Meter = "#wifi/scrim" ["FollowOpacityCustomizer"]` |
 | `Position` | a translation, no layout (cheap: the tree is kept) | smarthome-app `wifi_card: Position = "#wifi/card" ["FollowPositionCustomizer"]` |
+| `Scrolled` | a body that scrolls in its place with a `ListView` of one row: its y is the scroll's, a fling stepped frame by frame | smarthome-app `event_body: Scrolled = "#event/body" ["ScrolledCustomizer"]` |
 | `TapTarget` | where the taps of a node go | smarthome-app `wifi_scrim_taps: TapTarget = "#wifi/scrim" ["TapTargetCustomizer"];` |
 
 Structural (the tree is built again, with its layout): a text, a variant, the items of a list, an
