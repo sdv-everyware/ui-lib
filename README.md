@@ -3,10 +3,10 @@
 UI components for harry apps on embedded devices: the look is designed in Figma, the behaviour
 is written in Rust, and the screen is drawn without the Android framework.
 
-![Tiles with a toggle, a slider, a segmented button and a stepper; a button, tabs, a switch, a radio button, a list item, a dropdown and icon buttons: the Library's previews, with the values an app sets.](docs/readme/components.png)
+![Every component of the Library, drawn from its previews with the values an app sets: buttons and their tones, icon buttons; toggle, radio, segmented button, dropdown, slider, tabs; tiles, list items, a bar chart, symbols, icons, a skeleton, a scrollbar; sheets, the keyboard dock, input fields and the keyboard.](docs/readme/components.png)
 
 EveryWare UI is the component library of [SDV EveryWare](https://github.com/sdv-everyware/everyware).
-It gives an app 21 components, from a button to an on-screen keyboard, named after their
+It gives an app 22 components, from a button to an on-screen keyboard, named after their
 Material 3 roles. The apps run on harry, the Rust UI framework of Android's SDV display stack,
 and need no Java, no SurfaceFlinger and no WebView.
 
@@ -16,14 +16,15 @@ and need no Java, no SurfaceFlinger and no WebView.
 
 | Group | Component | What it is |
 |---|---|---|
-| Actions | [Button](docs/content/button.md) | A text button: filled, tonal or text, in two widths. |
+| Actions | [Button](docs/content/button.md) | A text button: filled, tonal or text, in two widths, in a success, warning or error tone. |
 | | [Icon button](docs/content/icon_button.md) | A button with one glyph and no label, in two sizes. |
 | Selection | [Toggle](docs/content/toggle.md) | An on/off switch. |
 | | [Radio](docs/content/radio.md) | A group of options where one is on. |
 | | [Segmented button](docs/content/segmented.md) | One choice of two to four. |
 | | [Dropdown](docs/content/dropdown.md) | A pill that opens a list of choices below it. |
 | | [Slider](docs/content/slider.md) | A value from 0 to 100, dragged with the finger. |
-| | [Tabs](docs/content/tabs.md) | The screen's navigation. |
+| Navigation | [Tabs](docs/content/tabs.md) | The screen's navigation: a bar of two to four screens. |
+| | [Pages](docs/content/pages.md) | Pages that take turns in one place: one page deeper slides in, Back slides it out. |
 | Content | [Tile](docs/content/tile.md) | A device's card: symbol, title, value and the device's control. |
 | | [List item](docs/content/list_item.md) | One row of a list, with a leading icon or image and a trailing end. |
 | | [Bar chart](docs/content/bar_chart.md) | A row of 24 bars. |
