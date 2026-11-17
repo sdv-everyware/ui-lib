@@ -222,7 +222,7 @@ module.exports = function patch(msg, helpers) {
   // (the status row: white 44 % with a white line, as Presence), scrim (white 15 % on the
   // camera). size: regular 56, compact 48 (Adjust humidity, the Wi-Fi indicator).
   // the right column, from under the bar chart down to the list items: the set grows with the
-  // spec's icons (components.json), 13 of them are 984 high
+  // spec's icons (components.json), 17 of them are 1272 high
   heading(2400, 1300, 'Icon button');
   const ICON_SIZE = { regular: 56, compact: 48 };
   const TARGET = 72;
@@ -259,9 +259,34 @@ module.exports = function patch(msg, helpers) {
     });
     return g;
   };
+  // chevron-left and chevron-up: the design has chevron-right and chevron-down; each turned half
+  // round about its centre, inside a frame that stays upright (the caller moves that frame), so
+  // the four directions of a direction pad are the same stroke
+  const turnedIcon = (parent, name, from, S, ink) => {
+    const f = designIcon(from);
+    const g = frame(parent, name, (S - f.size.x) / 2, (S - f.size.y) / 2, f.size.x, f.size.y);
+    const c = copyNode(f, g, 0, 0, n => { if (n.type === 'VECTOR') n.strokePaints = [A.solid(ink)]; });
+    c.transform = at(f.size.x, f.size.y, 180);
+    return g;
+  };
+  // 24 x 24, the design's has none: Lucide "gamepad", a body of 20 x 12 with round corners, a
+  // cross at the left and two buttons at the right, in the line weight of the design's icons
+  const gamepadIcon = (parent, x, y, ink) => {
+    const g = frame(parent, 'gamepad', x, y, 24, 24);
+    const th = 1.7;
+    rect(g, 'body', 2, 6, 20, 12, null, 3, { ...stroke(ink, th) });
+    rect(g, 'cross-h', 6 - th / 2, 12 - th / 2, 4 + th, th, ink, th / 2);
+    rect(g, 'cross-v', 8 - th / 2, 10 - th / 2, th, 4 + th, ink, th / 2);
+    ellipse(g, 'button-1', 15 - 1.1, 13 - 1.1, 2.2, 2.2, ink);
+    ellipse(g, 'button-2', 18 - 1.1, 11 - 1.1, 2.2, 2.2, ink);
+    return g;
+  };
   const icon = (parent, name, S, ink) => {
     if (name === 'wifi') return wifiIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
     if (name === 'x') return closeIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
+    if (name === 'gamepad') return gamepadIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
+    if (name === 'chevron-left') return turnedIcon(parent, name, 'chevron-right', S, ink);
+    if (name === 'chevron-up') return turnedIcon(parent, name, 'chevron-down', S, ink);
     const f = designIcon(name);
     return copyNode(f, parent, (S - f.size.x) / 2, (S - f.size.y) / 2, n => { if (n.type === 'VECTOR') n.strokePaints = [A.solid(ink)]; });
   };

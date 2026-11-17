@@ -130,10 +130,40 @@ pub enum Icon {
     Armchair,
     /// `droplets`: humidity, water
     Droplets,
+    /// `chevron-left`: back, or a direction (a direction pad)
+    ChevronLeft,
+    /// `chevron-up`: up, or a direction
+    ChevronUp,
+    /// `chevron-down`: down, or a direction
+    ChevronDown,
+    /// `gamepad`: a game
+    Gamepad,
 }
 
 impl Icon {
-    fn name(self) -> &'static str {
+    /// Every icon, in the order of the set's property (components.json).
+    pub const ALL: &'static [Icon] = &[
+        Icon::Minus,
+        Icon::Plus,
+        Icon::Sliders,
+        Icon::Maximize,
+        Icon::ChevronRight,
+        Icon::Settings,
+        Icon::Wifi,
+        Icon::Close,
+        Icon::House,
+        Icon::DoorOpen,
+        Icon::BedDouble,
+        Icon::Armchair,
+        Icon::Droplets,
+        Icon::ChevronLeft,
+        Icon::ChevronUp,
+        Icon::ChevronDown,
+        Icon::Gamepad,
+    ];
+
+    /// The value of the set's `icon` property.
+    pub fn name(self) -> &'static str {
         match self {
             Icon::Minus => "minus",
             Icon::Plus => "plus",
@@ -148,6 +178,10 @@ impl Icon {
             Icon::BedDouble => "bed-double",
             Icon::Armchair => "armchair",
             Icon::Droplets => "droplets",
+            Icon::ChevronLeft => "chevron-left",
+            Icon::ChevronUp => "chevron-up",
+            Icon::ChevronDown => "chevron-down",
+            Icon::Gamepad => "gamepad",
         }
     }
 }
@@ -219,6 +253,32 @@ mod tests {
         assert_eq!(b.on(Gesture::UP), Some(ButtonEvent::Clicked));
         assert_eq!(b.press.pressed_target(), 0.0);
         assert_eq!(b.press.press_transition(Button::KIND).unwrap().duration.as_millis(), 160);
+    }
+
+    #[test]
+    fn the_icons_are_the_icon_button_set_of_the_spec() {
+        let spec: serde_json::Value = serde_json::from_str(include_str!("../../components.json")).unwrap();
+        let icons: Vec<&str> = spec["components"]["icon_button"]["props"]["icon"].as_array().unwrap().iter().map(|v| v.as_str().unwrap()).collect();
+        let ours: Vec<&str> = Icon::ALL.iter().map(|i| i.name()).collect();
+        assert_eq!(icons, ours);
+        let pad = IconButton::new(IconButtonKind::Tonal, Icon::ChevronUp);
+        assert_eq!(pad.variant(), "kind=tonal, state=default, icon=chevron-up, size=regular");
+        assert_eq!(IconButton::new(IconButtonKind::Glass, Icon::Gamepad).compact().variant(), "kind=glass, state=default, icon=gamepad, size=compact");
+    }
+
+    #[test]
+    fn a_held_button_is_pressed_until_the_finger_lifts_or_leaves() {
+        // a direction pad acts while its button is held: press.pressed from the down to the up
+        let mut b = IconButton::new(IconButtonKind::Tonal, Icon::ChevronLeft);
+        b.on(Gesture::DOWN);
+        assert!(b.press.pressed);
+        b.on(Gesture::Move { x: 1.0, y: 1.0, inside: true });
+        assert!(b.press.pressed, "a finger that moves on the button still holds it");
+        assert_eq!(b.on(Gesture::UP), Some(ButtonEvent::Clicked));
+        assert!(!b.press.pressed);
+        b.on(Gesture::DOWN);
+        b.on(Gesture::Move { x: 90.0, y: 1.0, inside: false });
+        assert!(!b.press.pressed, "a finger that slides off lets go");
     }
 
     #[test]

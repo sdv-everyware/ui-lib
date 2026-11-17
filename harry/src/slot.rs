@@ -1236,6 +1236,8 @@ mod tests {
             slot("#s", &Tile::new(TileKind::Image, SymbolIcon::DoorOpen, "Front door", "Camera")),
         ]
         .into_iter()
+        // every glyph of the icon button, each a variant of the set
+        .chain(Icon::ALL.iter().map(|icon| slot("#s", &IconButton::new(IconButtonKind::Glass, *icon).compact())))
         .map(|s| s.items()[0].clone())
         .collect()
     }
