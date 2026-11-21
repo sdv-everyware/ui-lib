@@ -98,7 +98,7 @@ pub fn setpoint_reported(state: &mut State, setpoint: i32) {
 A slot of 72 × 72 named `#<screen>/<name>` (`#climate/minus`, `#climate/plus`) with an instance of `#icon-button` inside. The instance's `icon` is the preview; the app's `IconButton::new(kind, icon)` picks the real one. A row of icon buttons is a row of slots.
 
 ## How it works
-`kind` is the look (`tonal` a soft accent circle for the widgets, `glass` white 44 % with a white line for the status row, `scrim` white 15 % over the camera), `icon` the glyph (Lucide names: `minus`, `plus`, `x`, `settings-2`, the four chevrons, `gamepad` ...), `size` the circle (`regular` 56, `compact` 48). `state` is only `default` or `disabled`. Pressed is `#icon-button/pressed`, a layer the binding fades (display-only, no rebuild).
+`kind` is the look (`tonal` a soft accent circle for the widgets, `glass` white 44 % with a white line for the status row, `scrim` white 15 % over the camera), `icon` the glyph (Lucide names: `minus`, `plus`, `x`, `settings-2`, the four chevrons, `gamepad`, `pencil` ...), `size` the circle (`regular` 56, `compact` 48). `state` is only `default` or `disabled`. Pressed is `#icon-button/pressed`, a layer the binding fades (display-only, no rebuild).
 
 ## Traps
 - The glyph is part of the variant: another `icon` at runtime is a variant change, a tree rebuild. Pick one glyph per place.

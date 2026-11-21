@@ -153,6 +153,8 @@ pub enum Icon {
     ChevronDown,
     /// `gamepad`: a game
     Gamepad,
+    /// `pencil`: edits (a name)
+    Pencil,
 }
 
 impl Icon {
@@ -175,6 +177,7 @@ impl Icon {
         Icon::ChevronUp,
         Icon::ChevronDown,
         Icon::Gamepad,
+        Icon::Pencil,
     ];
 
     /// The value of the set's `icon` property.
@@ -197,6 +200,7 @@ impl Icon {
             Icon::ChevronUp => "chevron-up",
             Icon::ChevronDown => "chevron-down",
             Icon::Gamepad => "gamepad",
+            Icon::Pencil => "pencil",
         }
     }
 }

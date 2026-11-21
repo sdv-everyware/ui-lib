@@ -294,10 +294,28 @@ module.exports = function patch(msg, helpers) {
     ellipse(g, 'button-2', 18 - 1.1, 11 - 1.1, 2.2, 2.2, ink);
     return g;
   };
+  // 24 x 24, the design's has none: Lucide "pencil" (ISC, NOTICE) in the line weight of the
+  // design's icons: the shaft as an outline that leans to the right, the band below its top, the
+  // point as a dot at its lower end
+  const pencilIcon = (parent, x, y, ink) => {
+    const g = frame(parent, 'pencil', x, y, 24, 24);
+    const th = 1.7;
+    // a bar of len x h turned by deg about its centre (cx, cy)
+    const turned = (name, cx, cy, len, h, deg, extra) => {
+      const r = deg * Math.PI / 180;
+      const ox = cx - (Math.cos(r) * len / 2 - Math.sin(r) * h / 2), oy = cy - (Math.sin(r) * len / 2 + Math.cos(r) * h / 2);
+      return base(g, 'ROUNDED_RECTANGLE', name, 0, 0, len, h, { ...extra, transform: at(ox, oy, deg) });
+    };
+    turned('shaft', 13, 11, 16, 6, -45, { fillPaints: [], cornerRadius: 1.6, ...stroke(ink, th) });
+    turned('band', 15.4, 8.6, 6, th, 45, { fillPaints: [A.solid(ink)], cornerRadius: th / 2 });
+    ellipse(g, 'point', 3.2, 18.6, 2.2, 2.2, ink);
+    return g;
+  };
   const icon = (parent, name, S, ink) => {
     if (name === 'wifi') return wifiIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
     if (name === 'x') return closeIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
     if (name === 'gamepad') return gamepadIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
+    if (name === 'pencil') return pencilIcon(parent, (S - 24) / 2, (S - 24) / 2, ink);
     if (name === 'chevron-left') return turnedIcon(parent, name, 'chevron-right', S, ink);
     if (name === 'chevron-up') return turnedIcon(parent, name, 'chevron-down', S, ink);
     const f = designIcon(name);
