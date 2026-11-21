@@ -1,6 +1,6 @@
 ---
 name: new-app
-description: Make a new EveryWare app (a new screen as its own harry app on the EveryWare UI library) from one sentence, end to end - the layout agreed as an ASCII sketch, the app's repository from the template-app template (scripts/new-app.sh), the design as a kiwi patch of Library slots, the .fig and the .dcf without Figma (roundtrip.js, fig-to-dcf.sh), the app's state, actions, presenter and UI model, the build for the RB3 and the run on its HDMI with a screenshot. Use when the user asks for a new EveryWare app, board, dashboard, screen or device UI ("a kitchen panel", "an app with only the time", "a launcher like webOS"), or wants to try the library from a new app. For one more control on an existing screen use use-component; for a new component ui-component.
+description: Make a new EveryWare app (a new screen as its own harry app on the EveryWare UI library) from one sentence, end to end - the layout agreed as an ASCII sketch, the app's repository from the template-app template (scripts/new-app.sh), the design as a kiwi patch of Library slots, the .fig and the .dcf without Figma (roundtrip.js, fig-to-dcf.sh), the app's state, actions, presenter and UI model, the build for the RB3 or Cuttlefish, and the run on the target with a screenshot. Use when the user asks for a new EveryWare app, board, dashboard, screen or device UI ("a kitchen panel", "an app with only the time", "a launcher like webOS"), or wants to try the library from a new app. For one more control on an existing screen use use-component; for a new component ui-component.
 ---
 
 # A new EveryWare app from one sentence
@@ -15,16 +15,16 @@ variants into slots under `#<name>-root` of the EveryWare Library .fig (ui-lib `
 sentence ──► 1 layout (ASCII, the user picks) ──► 2 new-app.sh <name>
                                                    └─ utils/<name>-app   (template-app renamed, git)
                                                        └─ design/<name>-patch.js (the template's, renamed)
-         ──► 3 the patch ──► 4 .fig ──► 5 .dcf ──► 6 the app's code ──► 7 m <name>_app ──► 8 RB3
+         ──► 3 the patch ──► 4 .fig ──► 5 .dcf ──► 6 the app's code ──► 7 m <name>_app ──► 8 target
 ```
 
 ## Which tree for which step
 
 | Step | Where | Why |
 |---|---|---|
-| 2 app and patch, 3, 6 code, 7 build | the app's repository in the tree, `out_rb3` | the patch and `ui_model.rs` are the contract and change in one commit; Soong builds the app from its folder |
+| 2 app and patch, 3, 6 code, 7 build | the app's repository in the tree, `out_rb3` or `cuttlefish_out` | the patch and `ui_model.rs` are the contract and change in one commit; Soong builds the app from its folder |
 | 4, 5 (the tools) | the tree's everyware: `vendor/sdv-everyware/everyware` (new-app.sh warns when its Figma tools differ from main's, which is so only while a change of them is open) | roundtrip.js, fig2json.js and fig-to-dcf.sh (the dark theme is `$UI/design/dark-theme-patch.js`); fig-to-dcf.sh imports with everyware's `tools/dcf` (dcf-fetch `--local`, on our fork of DesignCompose) |
-| 8 | the RB3 over adb | |
+| 8 | the RB3 or Cuttlefish over adb | |
 
 Below, from the tree's top: `FIGMA=vendor/sdv-everyware/everyware/design/figma`,
 `UI=vendor/sdv-everyware/ui-lib`, `APP=packages/services/display_safety/utils/<name>-app`.
@@ -117,11 +117,13 @@ action changes `state.rs`) `->` presenter (`presenter.rs`: state to UI model) `-
 ps -C soong_ui -o pid,etime,args       # another build in the same out dir: wait for it
 # env.sh is bash (BASH_SOURCE): from zsh, the Bash tool's shell, run it under bash
 bash -c 'source device/rb3/sdv_media_db845c/tools/env.sh >/dev/null 2>&1; m <name>_app'
+# or Cuttlefish (no board needed):
+bash -c 'source device/cf-everyware/sdv_media_everyware_cf/tools/env.sh >/dev/null 2>&1; m <name>_app'
 ```
 
 Warnings are errors (`-D warnings`): an unused import or function of the template fails the build.
 
-## 8. On the RB3
+## 8. On the target (RB3 or Cuttlefish)
 
 Say before every command on the RB3 whether it changes its state. The RB3 is shared with
 other sessions: do not stop or kill what you did not start; ask.
@@ -146,6 +148,11 @@ python3 -c "from PIL import Image; d=open('fb.raw','rb').read()[:1920*1080*4]; I
 A tap for a test (the USB touch reports 0..32767, `x*32767/1920`, `y*32767/1080`): `sendevent
 /dev/input/event3` with ABS_MT_SLOT 0, TRACKING_ID, POSITION_X/Y, BTN_TOUCH 1, SYN, then
 TRACKING_ID -1, BTN_TOUCH 0, SYN. The app logs `<name>: down on <node>` for every touch.
+
+On Cuttlefish (`adb -s 127.0.0.1:6526`, or `0.0.0.0:6526` on older `cvd`; see `cvd fleet`), push
+from `cuttlefish_out/target/product/sdv_media_everyware_cf/system/bin/<name>_app`, interact in
+the WebRTC page at `https://localhost:1443`, and capture a screenshot with
+`device/cf-everyware/sdv_media_everyware_cf/tools/run.sh screenshot screen.png`.
 
 ## 9. The .fig for a review
 

@@ -93,23 +93,32 @@ in tv-app's `data/`, Noto Sans and others
 
 ## Build
 
-The RB3 (arm64, `out_rb3`; in bash, env.sh uses `BASH_SOURCE`):
+RB3 (`arm64`, `out_rb3`) or Cuttlefish (`x86_64`, `cuttlefish_out`; in bash, `env.sh` uses
+`BASH_SOURCE`):
 
 ```bash
+# RB3
 bash -c 'source device/rb3/sdv_media_db845c/tools/env.sh >/dev/null && m <name>_app'
 # an app for /system: out_rb3/target/product/sdv_media_db845c/system/bin/<name>_app
 # an app in an APEX (smarthome_app): the APEX variant under
 #   out_rb3/soong/.intermediates/packages/services/display_safety/utils/<name>-app/<name>_app/android_vendor_arm64_*_apex*/
+
+# Cuttlefish
+bash -c 'source device/cf-everyware/sdv_media_everyware_cf/tools/env.sh >/dev/null && m <name>_app'
+# an app for /system: cuttlefish_out/target/product/sdv_media_everyware_cf/system/bin/<name>_app
+# an app in an APEX (smarthome_app): the APEX variant under
+#   cuttlefish_out/soong/.intermediates/packages/services/display_safety/utils/<name>-app/<name>_app/android_vendor_x86_64_*_apex*/
 ```
 
 ## Run
 
-| | The RB3 |
-|---|---|
-| adb | over USB; the run scripts take the board's serial from `SERIAL` |
-| display | HDMI 1920 x 1080; the touch reports 0..32767, so `--touch-size 1920x1080` |
-| holds the display | the installed panel, init's service `smarthome` (`stop smarthome`, `start smarthome` brings it back; the board is shared: stop only what you started, or ask) |
-| a script to copy | `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh` |
+| | The RB3 | Cuttlefish |
+|---|---|---|
+| adb | over USB; the run scripts take the board's serial from `SERIAL` | over vsock proxy (`127.0.0.1:6526` or `0.0.0.0:6526` for `CF_INSTANCE=7`; see `cvd fleet`) |
+| display | HDMI 1920 x 1080 (`card0-HDMI-A-1`); touch 0..32767 scaled by `--touch-size 1920x1080` | virtual 1920 x 1080 (`card0-Virtual-1`, WebRTC at `https://localhost:1443`); virtio touch in display pixels (`--touch-size 1920x1080` maps 1:1) |
+| holds the display | the installed panel, init's service `smarthome` (`stop smarthome`, `start smarthome` brings it back; the board is shared: stop only what you started, or ask) | the installed panel, init's service `smarthome` (`stop smarthome`, `start smarthome` brings it back) |
+| a script to copy | `vendor/sdv-everyware/everyware/scripts/run-smarthome.sh` | `vendor/sdv-everyware/everyware/scripts/run-smarthome.sh --target cf` |
+| screenshot | `fbgrab` (new-app skill, step 8) | `device/cf-everyware/sdv_media_everyware_cf/tools/run.sh screenshot <file.png>` |
 
 Common: `adb root`, then poll until `id -u` is 0; `setprop log.tag INFO`; the libraries' path as
 in the new-app skill, step 8.
@@ -127,5 +136,6 @@ adb logcat -d | grep "pre-render ms"
 
 A screen at rest makes no page flips: animate something (a tap) before measuring. The logcat
 ring buffer is 256 KiB: capture while reproducing (`logcat -T 1 | grep ...`). A screenshot reads
-the framebuffer, as `screencap` needs SurfaceFlinger: the commands are in the new-app skill,
-step 8 ([#20](https://github.com/sdv-everyware/everyware/issues/20) publishes the reader).
+the framebuffer on hardware boards (as `screencap` needs SurfaceFlinger: `everyware/tools/fbgrab`,
+new-app skill step 8), or uses `device/cf-everyware/sdv_media_everyware_cf/tools/run.sh screenshot`
+on Cuttlefish (where `gfxstream` keeps GPU scanout buffers in host memory).

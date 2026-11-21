@@ -210,8 +210,9 @@ measured with the design's text and an opacity set by the item never reaches the
 - A component with inner tap targets (keyboard keys, dropdown items) reports taps by the inner
   names (`#kbd/r1/3`, `#dropdown/item/2`); they are unambiguous while one such component is on
   the screen (one keyboard, one open list).
-- Build `m smarthome_app`, run `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh`,
-  screenshot (the new-app skill, step 8), press and release the component on the touch screen.
+- Build `m smarthome_app`, run `vendor/sdv-everyware/everyware/scripts/run-smarthome.sh`
+  (add `--target cf` for Cuttlefish), screenshot (the new-app skill, step 8), press and release
+  the component on the touch screen.
 
 ## Example: a composite component (the keyboard)
 
