@@ -107,7 +107,7 @@ action changes `state.rs`) `->` presenter (`presenter.rs`: state to UI model) `-
   The library has components only; never add an app's content to ui-lib.
 - Each component's code with real names: `$UI/docs/examples/<component>.rs`.
 - The time comes from `clock.rs`. Data from a bundle comes on a thread of the app that sends
-  actions (tv-app's `house_link.rs`: the dashboard bundle's gRPC on port 7100). Replace the
+  actions (tv-app's `house_link.rs`: the dashboard bundle's binder link, everyware's `interfaces/screen/link`). Replace the
   template's description in the file headers (`new-app.sh` lists them).
 - Fit the README's first paragraph to the app.
 
@@ -127,7 +127,7 @@ Say before every command on the RB3 whether it changes its state. The RB3 is sha
 other sessions: do not stop or kill what you did not start; ask.
 
 ```bash
-# read only: who draws now (one app at a time holds the display and port 7100)
+# read only: who draws now (one app at a time holds the display and serves the binder link)
 adb shell 'pidof smarthome_app hub_app tv_app; for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q card0 && cat $p/cmdline && echo; done'
 # changes state: stop the one on the screen, by pid (smarthome_app is init's service: stop smarthome)
 adb shell 'kill $(pidof <name>_app)'
@@ -170,7 +170,7 @@ what became of them, the built `.fig`, the screenshots from the board), and
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Failed to make Impeller GL context current ... Permission denied" | another app holds `/dev/dri/card0` | step 8's read-only check; stop it only if you started it |
-| an app that uses the dashboard bundle starts, its data never comes | another app holds port 7100 | one app at a time |
+| an app that uses the dashboard bundle starts, its data never comes | another app serves the binder link (`IScreenLink`) | one app at a time |
 | a name binds nothing, the slot shows the preview | the patch and `ui_model.rs` disagree | `CHECK` with the name in step 4 |
 | fig-to-dcf.sh: `--local` unknown, or `from_local` missing | run from a tree whose display_safety or external is not on the branches above | run the tree's everyware script |
 | build fails on the template's unused code | `-D warnings` | delete it with the feature (step 6) |

@@ -72,7 +72,7 @@ actions.send(Actions::CustomAction(AppAction::LightConfirmed { room, on }))
 ```
 
 Example: `DS/utils/gui-playground-app/src/actions.rs`. The four EveryWare apps run threads of
-their own instead (tv-app's `house_link.rs`: the dashboard bundle's gRPC, answers as actions)
+their own instead (tv-app's `house_link.rs`: the dashboard bundle's binder link, answers as actions)
 and keep the side effects channel empty (`channel::<()>()` with a thread that drains it).
 
 ## Fonts in a .dcf
