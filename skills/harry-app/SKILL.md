@@ -1,6 +1,6 @@
 ---
 name: harry-app
-description: Write, build, run and debug a harry app on the EveryWare UI library - the Figma design with #-named layers and its .dcf, the Rust app with State / actions / reducer / presenter / UI model (everyware_ui::ui_model!), fonts, touch, side effects, the build for the RB3 (sdv_media_db845c, out_rb3), the run on the board's HDMI, the log and frame-rate checks. Use when the user asks to change or debug an existing harry app (smarthome-app, tv-app, hub-app, pairs-app or a new one), to add a plain text, a tap or a side effect, to bind a plain Figma layer (a text, a tap) to code, to run an app on the RB3, or when an app shows broken text, a black or noisy screen, dead touch or a low frame rate. For a new app from one sentence use new-app; for a library component on a screen, use-component; for a sheet, sheet; for the screens and the prototype in Figma, figma-design.
+description: Write, build, run and debug a harry app on the EveryWare UI library - the Figma design with #-named layers and its .dcf, the Rust app with State / actions / reducer / presenter / UI model (everyware_ui::ui_model!), fonts, touch, side effects, the build for the RB3 (sdv_media_db845c, out_rb3) or Cuttlefish (sdv_media_everyware_cf, cuttlefish_out), the run on HDMI or Cuttlefish WebRTC, the log and frame-rate checks. Use when the user asks to change or debug an existing harry app (smarthome-app, tv-app, hub-app, pairs-app or a new one), to add a plain text, a tap or a side effect, to bind a plain Figma layer (a text, a tap) to code, to run an app on the RB3 or Cuttlefish, or when an app shows broken text, a black or noisy screen, dead touch or a low frame rate. For a new app from one sentence use new-app; for a library component on a screen, use-component; for a sheet, sheet; for the screens and the prototype in Figma, figma-design.
 ---
 
 # harry apps
@@ -58,17 +58,20 @@ libhar_user_input_evdev and libhar_log are visible only to display_safety's own 
    the action. I/O, SDV and the network go through side effects or a thread of their own that
    sends actions. A library component is one `Slot` (the use-component skill). The checklist and
    the field types: reference.md.
-5. **Build** for the RB3: `m <name>_app` after `source device/rb3/sdv_media_db845c/tools/env.sh`,
-   in bash. Show the last lines of the build.
-6. **Run.** `vendor/sdv-everyware/everyware/scripts/run-smarthome-rb3.sh` is the model: adb root,
-   stop what holds the display (the installed panel: `stop smarthome`; the RB3 is shared, so
-   stop only what you started, or ask), push the binary and
-   `data/`, `setprop log.tag INFO`, run with the libraries' path and `--touch-size` from
-   `/sys/class/drm/card0-HDMI-A-1/modes`. Run it in the background. The new-app skill, step 8,
-   has the commands for any app.
+5. **Build** for the target (`rb3` or Cuttlefish `cf`): `m <name>_app` after sourcing
+   `device/rb3/sdv_media_db845c/tools/env.sh` or
+   `device/cf-everyware/sdv_media_everyware_cf/tools/env.sh`, in bash. Show the last lines of the
+   build.
+6. **Run.** `vendor/sdv-everyware/everyware/scripts/run-smarthome.sh` (`--target rb3` or
+   `--target cf`) is the model: adb root, stop what holds the display (the installed panel:
+   `stop smarthome`; the RB3 is shared, so stop only what you started, or ask), push the binary
+   and `data/`, `setprop log.tag INFO`, run with the libraries' path and `--touch-size` from the
+   connector's modes (`card0-HDMI-A-1` on RB3, `card0-Virtual-1` on Cuttlefish). Run it in the
+   background. The new-app skill, step 8, has the commands for any app.
 7. **Verify.** The process is alive (`pidof`), `logcat` with the app's tag, the frame rate from
-   the DRM trace (reference.md), a screenshot (the new-app skill, step 8). Look at the screen
-   before saying it works.
+   the DRM trace (reference.md), a screenshot (the new-app skill, step 8; on Cuttlefish,
+   `device/cf-everyware/sdv_media_everyware_cf/tools/run.sh screenshot <file.png>`). Look at the
+   screen before saying it works.
 8. **Commit** in the app's repository; update its docs when a new pattern appeared.
 
 ## 3. When something is wrong
