@@ -2,10 +2,12 @@
 //! layout, harry lays it out the same), and the app slides the card to the middle of the screen
 //! with a position override, so it needs the content's height. harry does not hand layout
 //! results to the app; the design does: the .dcf the app ships holds every node's size, and this
-//! reads the variants of the component sets once at the start (a few hundred ms for a 13 MB
-//! document).
+//! reads the variants of the component sets once at the start. Parsing the file is the cost
+//! (a few hundred ms for a 15 MB document), so an app that loads the document for harry itself
+//! takes the sizes from that document (`Sizes::of`) and the file is parsed once.
 
 use dc_bundle::definition_file::load_design_def;
+use dc_bundle::design_compose_definition::DesignComposeDefinition;
 use dc_bundle::view::view_data::View_data_type;
 use dc_bundle::view::View;
 use std::collections::HashMap;
@@ -46,10 +48,16 @@ pub struct Frame {
 }
 
 impl Sizes {
-    /// Reads the .dcf; an error names the file.
+    /// Reads the .dcf; an error names the file. This parses the whole file: an app that loads
+    /// the document for harry as well uses `of` on the loaded document instead.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, String> {
         let path = path.as_ref();
         let (_, doc) = load_design_def(path).map_err(|e| format!("{}: {e:?}", path.display()))?;
+        Ok(Sizes::of(&doc))
+    }
+
+    /// The sizes of a document that is loaded already.
+    pub fn of(doc: &DesignComposeDefinition) -> Self {
         let mut sizes = Sizes::default();
         for view in doc.views.values() {
             sizes.collect(view);
@@ -58,7 +66,7 @@ impl Sizes {
                 sizes.place(view, (origin.x.unwrap_or(0.0), origin.y.unwrap_or(0.0)));
             }
         }
-        Ok(sizes)
+        sizes
     }
 
     /// No design: every lookup is None (the sheets keep their default geometry).
@@ -192,6 +200,20 @@ mod tests {
         assert!(compact.0 < regular.0, "compact {compact:?} regular {regular:?}");
         assert_eq!(sizes.height("#button", "kind=primary, state=default, size=regular"), Some(regular.1));
         assert_eq!(sizes.height("#nothing", "state=default"), None);
+    }
+
+    #[test]
+    fn a_loaded_document_gives_the_sizes_the_file_gives() {
+        let (_, doc) = load_design_def(dcf()).expect("library.dcf");
+        let (of, load) = (Sizes::of(&doc), Sizes::load(dcf()).expect("library.dcf"));
+        assert!(!of.is_empty());
+        assert_eq!(
+            (of.variants.len(), of.frames.len(), of.parts.len()),
+            (load.variants.len(), load.frames.len(), load.parts.len())
+        );
+        let variant = "kind=primary, state=default, size=regular";
+        assert_eq!(of.variant("#button", variant), load.variant("#button", variant));
+        assert_eq!(of.frame("#button"), load.frame("#button"));
     }
 
     #[test]
