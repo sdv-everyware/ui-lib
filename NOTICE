@@ -5,7 +5,7 @@ Lucide (https://lucide.dev, https://github.com/lucide-icons/lucide)
 The Library's glyphs are Lucide's: the icon frames of the design's source file that
 design/components-patch.js copies (house, chevron-right, chevron-down, settings-2, ...), the
 glyphs it turns from them (chevron-left, chevron-up) and the geometry of the glyphs it draws after
-Lucide's (x, gamepad). Lucide is under the ISC License, with portions from Feather under the MIT
+Lucide's (x, gamepad, pencil). Lucide is under the ISC License, with portions from Feather under the MIT
 License:
 
 ISC License
